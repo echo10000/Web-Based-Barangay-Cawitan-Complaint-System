@@ -17,6 +17,11 @@ urlpatterns = [
     
     # Staff URLs (requires login + staff)
     path('staff-dashboard/', views.staff_dashboard, name='staff_dashboard'),
+    path('staff/complaints/', views.staff_complaint_list, name='staff_complaint_list'),
+    path('staff/complaint/<int:pk>/edit/', views.staff_edit_complaint, name='staff_edit_complaint'),
+    path('staff/complaint/<int:pk>/update/', views.staff_add_update, name='staff_add_update'),
+    path('staff/reports/', views.staff_reports, name='staff_reports'),
+    path('staff/my-complaints/', views.staff_my_complaints, name='staff_my_complaints'),
     
     # API endpoints
     path('api/categories/', views.api_categories, name='api_categories'),

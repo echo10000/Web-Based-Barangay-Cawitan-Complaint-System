@@ -1,0 +1,53 @@
+{% extends 'complaints/base.html' %}
+
+{% block title %}Add Update - Staff Panel{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-chat-dots"></i> Add Public Update
+                    </h4>
+                    <small class="text-muted">Complaint: {{ complaint.reference_number }}</small>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            This update will be visible to the citizen who filed this complaint.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="message" class="form-label"><strong>Update Message</strong></label>
+                            <textarea name="message" id="message" class="form-control" rows="8" 
+                                      placeholder="Describe the current status and actions taken..." required></textarea>
+                            <small class="text-muted">Be clear and professional in your communication.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="attachment" class="form-label"><strong>Attachment (Optional)</strong></label>
+                            <input type="file" name="attachment" id="attachment" class="form-control">
+                            <small class="text-muted">You can attach photos, documents, or other evidence.</small>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Post Update
+                            </button>
+                            <a href="{% url 'complaints:staff_edit_complaint' complaint.pk %}" 
+                               class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

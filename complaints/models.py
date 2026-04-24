@@ -41,6 +41,7 @@ class Complaint(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    internal_notes = models.TextField(blank=True, default='')
 
     class Meta:
         ordering = ['-created_at']
