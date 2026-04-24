@@ -1,5 +1,11 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
+
+
+def generate_reference_number():
+    return uuid.uuid4().hex[:12].upper()
 
 
 class Category(models.Model):
@@ -24,10 +30,14 @@ class Complaint(models.Model):
         (STATUS_RESOLVED, 'Resolved'),
     ]
 
+    reference_number = models.CharField(max_length=20, unique=True, default=generate_reference_number, editable=False)
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='complaints')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints')
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_complaints')
     title = models.CharField(max_length=200)
     description = models.TextField()
+    location = models.CharField(max_length=200, blank=True)
+    attachment = models.FileField(upload_to='complaint_attachments/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -42,7 +52,8 @@ class Complaint(models.Model):
 class ComplaintUpdate(models.Model):
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, related_name='updates')
     status = models.CharField(max_length=20, choices=Complaint.STATUS_CHOICES, default=Complaint.STATUS_PENDING)
-    note = models.TextField()
+    message = models.TextField()
+    attachment = models.FileField(upload_to='complaint_updates/', blank=True, null=True)
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaint_updates')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -57,7 +68,7 @@ class Feedback(models.Model):
     complaint = models.ForeignKey(Complaint, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedbacks')
     user_email = models.EmailField()
     rating = models.PositiveSmallIntegerField(choices=[(i, str(i)) for i in range(1, 6)], default=5)
-    comments = models.TextField(blank=True)
+    comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

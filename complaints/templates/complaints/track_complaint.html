@@ -1,0 +1,20 @@
+{% extends 'complaints/base.html' %}
+
+{% block content %}
+<h1>Track Complaint</h1>
+<form method="get" class="mt-3 mb-4">
+    <div class="input-group">
+        <input type="text" name="reference" value="{{ reference }}" class="form-control" placeholder="Enter reference number">
+        <button class="btn btn-primary" type="submit">Track</button>
+    </div>
+</form>
+{% if complaint %}
+    <div class="card p-3">
+        <h3>{{ complaint.title }}</h3>
+        <p><strong>Status:</strong> {{ complaint.get_status_display }}</p>
+        <p>{{ complaint.description }}</p>
+    </div>
+{% elif reference %}
+    <div class="alert alert-warning">No complaint found for reference {{ reference }}.</div>
+{% endif %}
+{% endblock %}

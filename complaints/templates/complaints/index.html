@@ -1,0 +1,11 @@
+{% extends 'complaints/base.html' %}
+
+{% block content %}
+<h1>Welcome to the Barangay Cawitan Complaint System</h1>
+<div class="row mt-4">
+    <div class="col-md-3"><div class="card p-3"><h5>Total Complaints</h5><p class="fs-3">{{ total_complaints }}</p></div></div>
+    <div class="col-md-3"><div class="card p-3"><h5>Resolved</h5><p class="fs-3">{{ resolved_complaints }}</p></div></div>
+    <div class="col-md-3"><div class="card p-3"><h5>In Progress</h5><p class="fs-3">{{ in_progress_complaints }}</p></div></div>
+    <div class="col-md-3"><div class="card p-3"><h5>Pending</h5><p class="fs-3">{{ pending_complaints }}</p></div></div>
+</div>
+{% endblock %}

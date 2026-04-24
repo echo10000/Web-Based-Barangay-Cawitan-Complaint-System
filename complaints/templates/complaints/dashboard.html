@@ -1,0 +1,31 @@
+{% extends 'complaints/base.html' %}
+
+{% block content %}
+<h1>Dashboard</h1>
+<div class="row mt-4">
+    <div class="col-md-4"><div class="card p-3"><h5>My Complaints</h5><p class="fs-3">{{ my_complaint_count }}</p></div></div>
+    <div class="col-md-4"><div class="card p-3"><h5>Resolved</h5><p class="fs-3">{{ my_resolved }}</p></div></div>
+    <div class="col-md-4"><div class="card p-3"><h5>Pending</h5><p class="fs-3">{{ my_pending }}</p></div></div>
+</div>
+<h2 class="mt-4">Recent Complaints</h2>
+<table class="table mt-3">
+    <thead>
+        <tr>
+            <th>Reference</th>
+            <th>Title</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for complaint in my_complaints %}
+            <tr>
+                <td><a href="{% url 'complaints:complaint_detail' complaint.pk %}">{{ complaint.reference_number }}</a></td>
+                <td>{{ complaint.title }}</td>
+                <td>{{ complaint.get_status_display }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="3">No complaints yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
