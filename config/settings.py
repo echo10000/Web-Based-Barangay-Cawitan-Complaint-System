@@ -90,10 +90,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-USE_MYSQL = config('DJANGO_USE_MYSQL', default=False, cast=bool)
-MYSQL_DATABASE = config('MYSQL_DATABASE', default=None)
+USE_MYSQL = config('DJANGO_USE_MYSQL', default=True, cast=bool)
+MYSQL_DATABASE = config('MYSQL_DATABASE')
 
-if USE_MYSQL and MYSQL_DATABASE:
+if USE_MYSQL:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -108,12 +108,7 @@ if USE_MYSQL and MYSQL_DATABASE:
         }
     }
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+    raise RuntimeError('MySQL is required for this project. Set DJANGO_USE_MYSQL to True and configure MySQL environment values.')
 
 
 # Password validation
