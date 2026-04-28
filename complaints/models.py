@@ -30,6 +30,17 @@ class Complaint(models.Model):
         (STATUS_RESOLVED, 'Resolved'),
     ]
 
+    PRIORITY_LOW = 'low'
+    PRIORITY_MEDIUM = 'medium'
+    PRIORITY_HIGH = 'high'
+    PRIORITY_CRITICAL = 'critical'
+    PRIORITY_CHOICES = [
+        (PRIORITY_LOW, 'Low'),
+        (PRIORITY_MEDIUM, 'Medium'),
+        (PRIORITY_HIGH, 'High'),
+        (PRIORITY_CRITICAL, 'Critical'),
+    ]
+
     reference_number = models.CharField(max_length=20, unique=True, default=generate_reference_number, editable=False)
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='complaints')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='complaints')
@@ -39,8 +50,14 @@ class Complaint(models.Model):
     location = models.CharField(max_length=200, blank=True)
     attachment = models.FileField(upload_to='complaint_attachments/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default=PRIORITY_MEDIUM
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
     internal_notes = models.TextField(blank=True, default='')
 
     class Meta:
@@ -66,7 +83,13 @@ class ComplaintUpdate(models.Model):
 
 
 class Feedback(models.Model):
-    complaint = models.ForeignKey(Complaint, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedbacks')
+    complaint = models.OneToOneField(
+        Complaint,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='feedback'
+    )
     user_email = models.EmailField()
     rating = models.PositiveSmallIntegerField(choices=[(i, str(i)) for i in range(1, 6)], default=5)
     comment = models.TextField(blank=True)
