@@ -1,0 +1,146 @@
+{% extends 'complaints/base.html' %}
+
+{% block title %}Manage Complaints - Staff Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-shield-lock"></i> Manage Complaints
+        </h2>
+        <a href="{% url 'complaints:staff_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <!-- Advanced Filters -->
+    <div class="card border-0 mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search reference or title..." 
+                           value="{{ request.GET.search }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <select name="priority" class="form-select">
+                        <option value="">All Priority</option>
+                        <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>High</option>
+                        <option value="critical" {% if request.GET.priority == 'critical' %}selected{% endif %}>Critical</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <select name="assigned" class="form-select">
+                        <option value="">All</option>
+                        <option value="me" {% if request.GET.assigned == 'me' %}selected{% endif %}>Assigned to Me</option>
+                        <option value="unassigned" {% if request.GET.assigned == 'unassigned' %}selected{% endif %}>Unassigned</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if complaints %}
+    <div class="card border-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Reference</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Assigned To</th>
+                        <th>Filed Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for complaint in complaints %}
+                    <tr>
+                        <td><strong>{{ complaint.reference_number }}</strong></td>
+                        <td>{{ complaint.title|truncatewords:8 }}</td>
+                        <td>
+                            <span class="badge badge-{{ complaint.status }}">
+                                {{ complaint.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning" style="color: #000;">
+                                {{ complaint.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if complaint.assigned_to %}
+                                {{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ complaint.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'complaints:staff_edit_complaint' complaint.pk %}" 
+                               class="btn btn-sm btn-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    {% if complaints.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if complaints.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1&{{ request.GET.urlencode }}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ complaints.previous_page_number }}&{{ request.GET.urlencode }}">Previous</a>
+            </li>
+            {% endif %}
+            <li class="page-item active">
+                <span class="page-link">Page {{ complaints.number }}</span>
+            </li>
+            {% if complaints.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ complaints.next_page_number }}&{{ request.GET.urlencode }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ complaints.paginator.num_pages }}&{{ request.GET.urlencode }}">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info text-center py-5">
+        <h4><i class="bi bi-inbox"></i> No complaints found</h4>
+        <p>Try adjusting your filters</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

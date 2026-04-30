@@ -1,0 +1,94 @@
+{% extends 'complaints/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}File a Complaint - Barangay Cawitan{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> File a New Complaint
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                <strong>{{ form.title.label }}</strong>
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="alert alert-danger mt-2">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <strong>{{ form.description.label }}</strong>
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="alert alert-danger mt-2">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">
+                                <strong>{{ form.category.label }}</strong>
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <div class="alert alert-danger mt-2">{{ form.category.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.location.id_for_label }}" class="form-label">
+                                <strong>{{ form.location.label }}</strong>
+                            </label>
+                            {{ form.location }}
+                            {% if form.location.errors %}
+                                <div class="alert alert-danger mt-2">{{ form.location.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.attachment.id_for_label }}" class="form-label">
+                                <strong>{{ form.attachment.label }} (Optional)</strong>
+                            </label>
+                            <small class="d-block text-muted mb-2">
+                                Attach photos, documents, or evidence (PDF, JPG, PNG)
+                            </small>
+                            {{ form.attachment }}
+                            {% if form.attachment.errors %}
+                                <div class="alert alert-danger mt-2">{{ form.attachment.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Submit Complaint
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-4">
+                <h5><i class="bi bi-info-circle"></i> Important Information</h5>
+                <ul class="mb-0">
+                    <li>Provide as much detail as possible to help us resolve your complaint quickly</li>
+                    <li>You will receive a reference number that you can use to track your complaint</li>
+                    <li>Attach supporting documents to strengthen your complaint</li>
+                    <li>All complaints are treated confidentially</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
