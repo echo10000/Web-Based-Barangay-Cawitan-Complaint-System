@@ -1,0 +1,59 @@
+{% extends 'complaints/base.html' %}
+
+{% block title %}Login - Barangay Cawitan{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-5 mx-auto">
+            <div class="card border-0">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label"><strong>Username</strong></label>
+                            <input type="text" name="username" id="id_username" class="form-control" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label"><strong>Password</strong></label>
+                            <input type="password" name="password" id="id_password" class="form-control" required>
+                        </div>
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+                        
+                        <button type="submit" class="btn btn-primary w-100 btn-lg">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <p class="mb-2">Don't have an account?</p>
+                        <a href="{% url 'accounts:register' %}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-person-plus"></i> Register Here
+                        </a>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <a href="{% url 'accounts:password_reset' %}" class="text-decoration-none">
+                            Forgot your password?
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

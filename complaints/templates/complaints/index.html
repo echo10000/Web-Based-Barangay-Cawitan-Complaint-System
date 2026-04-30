@@ -1,0 +1,121 @@
+{% extends 'complaints/base.html' %}
+
+{% block title %}Home - Barangay Cawitan Complaint System{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mx-auto text-center">
+            <h1 class="display-4 mb-3" style="color: var(--primary);">
+                <i class="bi bi-megaphone"></i> Barangay Complaint System
+            </h1>
+            <p class="lead text-muted">
+                Report issues and track the resolution status of complaints in our Barangay
+            </p>
+            <div class="mt-4">
+                <a href="{% url 'complaints:file_complaint' %}" class="btn btn-primary btn-lg me-2">
+                    <i class="bi bi-plus-circle"></i> File a Complaint
+                </a>
+                <a href="{% url 'complaints:complaint_list' %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-list"></i> View All Complaints
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="row mb-5">
+        <div class="col-md-3 mb-3">
+            <div class="stat-box">
+                <h3>{{ total_complaints }}</h3>
+                <p>Total Complaints</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-box">
+                <h3 style="color: #f39c12;">{{ pending_complaints }}</h3>
+                <p>Pending Review</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-box">
+                <h3 style="color: #3498db;">{{ in_progress_complaints }}</h3>
+                <p>In Progress</p>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-box">
+                <h3 style="color: #27ae60;">{{ resolved_complaints }}</h3>
+                <p>Resolved</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- How It Works -->
+    <div class="row mb-5">
+        <div class="col-lg-10 mx-auto">
+            <h2 class="text-center mb-4">How It Works</h2>
+            <div class="row">
+                <div class="col-md-4 text-center mb-4">
+                    <div class="p-4 bg-white rounded" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <i class="bi bi-pencil-square" style="font-size: 3rem; color: var(--secondary);"></i>
+                        <h5 class="mt-3">Step 1: File</h5>
+                        <p class="text-muted">
+                            Submit your complaint with detailed information and supporting documents
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-4">
+                    <div class="p-4 bg-white rounded" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <i class="bi bi-hourglass-split" style="font-size: 3rem; color: var(--secondary);"></i>
+                        <h5 class="mt-3">Step 2: Review</h5>
+                        <p class="text-muted">
+                            Our team reviews and processes your complaint
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-4">
+                    <div class="p-4 bg-white rounded" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--secondary);"></i>
+                        <h5 class="mt-3">Step 3: Track</h5>
+                        <p class="text-muted">
+                            Monitor progress and receive updates on your complaint
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Start -->
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card border-0">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">
+                        <i class="bi bi-info-circle"></i> Need Help?
+                    </h4>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <strong>Track Your Complaint:</strong> 
+                            Use your reference number (e.g., COM-2024-00001) to 
+                            <a href="{% url 'complaints:track_complaint' %}">track your status</a>
+                        </li>
+                        <li class="mb-2">
+                            <strong>View All Complaints:</strong> 
+                            <a href="{% url 'complaints:complaint_list' %}">Browse all submitted complaints</a> 
+                            to see how others are being resolved
+                        </li>
+                        <li class="mb-2">
+                            <strong>Account Benefits:</strong> 
+                            <a href="{% url 'accounts:register' %}">Register an account</a> 
+                            to easily manage your complaints in one place
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

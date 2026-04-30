@@ -1,0 +1,163 @@
+{% extends 'complaints/base.html' %}
+
+{% block title %}Edit Complaint - Staff Panel{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">{{ complaint.reference_number }} - {{ complaint.title }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <strong class="text-muted">Filed By:</strong><br>
+                            {{ complaint.user.get_full_name|default:complaint.user.username }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted">Filed Date:</strong><br>
+                            {{ complaint.created_at|date:"M d, Y h:i A" }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="text-muted">Description:</strong>
+                        <p>{{ complaint.description|linebreaks }}</p>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted">Category:</strong><br>
+                            {% if complaint.category %}{{ complaint.category.name }}{% else %}Not set{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted">Location:</strong><br>
+                            {{ complaint.location }}
+                        </div>
+                    </div>
+                    
+                    {% if complaint.attachment %}
+                    <div class="mb-3">
+                        <strong class="text-muted">Attachment:</strong><br>
+                        <a href="{{ complaint.attachment.url }}" class="btn btn-sm btn-outline-primary" download>
+                            <i class="bi bi-download"></i> Download File
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card border-0 mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Updates ({{ complaint.updates.count }})</h5>
+                    <a href="{% url 'complaints:staff_add_update' complaint.pk %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus"></i> Add Update
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if complaint.updates.all %}
+                        {% for update in complaint.updates.all %}
+                        <div class="mb-3 pb-3 border-bottom">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ update.updated_by.get_full_name|default:update.updated_by.username }}</strong>
+                                <small class="text-muted">{{ update.created_at|date:"M d, Y h:i A" }}</small>
+                            </div>
+                            <p class="mt-2 mb-0">{{ update.message|linebreaks }}</p>
+                            {% if update.attachment %}
+                            <a href="{{ update.attachment.url }}" class="btn btn-sm btn-outline-secondary mt-2" download>
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">No updates yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <form method="POST" class="card border-0 mb-4">
+                {% csrf_token %}
+                
+                <div class="card-header">
+                    <h5 class="mb-0">Manage Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="status" class="form-label"><strong>Status</strong></label>
+                        <select name="status" id="status" class="form-select" required>
+                            <option value="">-- Select Status --</option>
+                            {% for value, label in complaint.STATUS_CHOICES %}
+                            <option value="{{ value }}" {% if complaint.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="priority" class="form-label"><strong>Priority</strong></label>
+                        <select name="priority" id="priority" class="form-select" required>
+                            <option value="">-- Select Priority --</option>
+                            {% for value, label in complaint.PRIORITY_CHOICES %}
+                            <option value="{{ value }}" {% if complaint.priority == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assigned_to" class="form-label"><strong>Assign To</strong></label>
+                        <select name="assigned_to" id="assigned_to" class="form-select">
+                            <option value="">-- Unassigned --</option>
+                            {% for staff in staff_members %}
+                            <option value="{{ staff.id }}" {% if complaint.assigned_to.id == staff.id %}selected{% endif %}>
+                                {{ staff.get_full_name|default:staff.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+            
+            <form method="POST" class="card border-0">
+                {% csrf_token %}
+                
+                <div class="card-header">
+                    <h5 class="mb-0">Internal Notes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <textarea name="internal_notes" class="form-control" rows="5" 
+                                  placeholder="Add internal notes (for staff only, not visible to citizen)"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus"></i> Add Note
+                    </button>
+                </div>
+            </form>
+            
+            {% if complaint.internal_notes %}
+            <div class="card border-0 mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Notes History</h5>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted" style="white-space: pre-wrap;">
+                        {{ complaint.internal_notes }}
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
