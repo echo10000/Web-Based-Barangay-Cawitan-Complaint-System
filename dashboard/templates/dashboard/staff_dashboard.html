@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Staff Dashboard | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Staff Dashboard</h1>
+    <p>Track complaints assigned to your account.</p>
+</div>
+<div class="stats-grid">
+    <div class="stat-card"><span>Assigned</span><strong>{{ assigned_count }}</strong></div>
+    <div class="stat-card"><span>In Progress</span><strong>{{ in_progress_count }}</strong></div>
+    <div class="stat-card"><span>Resolved</span><strong>{{ resolved_count }}</strong></div>
+</div>
+<div class="content-card mt-4">
+    <div class="section-title">Assigned Complaints</div>
+    {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+</div>
+{% endblock %}

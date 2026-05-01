@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Admin Dashboard</h1>
+    <p>Monitor complaint activity, residents, and staff workload.</p>
+</div>
+<div class="stats-grid">
+    <div class="stat-card"><span>Total Complaints</span><strong>{{ total_complaints }}</strong></div>
+    <div class="stat-card"><span>Pending</span><strong>{{ pending_count }}</strong></div>
+    <div class="stat-card"><span>Resolved</span><strong>{{ resolved_count }}</strong></div>
+    <div class="stat-card"><span>Residents</span><strong>{{ resident_count }}</strong></div>
+    <div class="stat-card"><span>Staff</span><strong>{{ staff_count }}</strong></div>
+</div>
+<div class="content-card mt-4">
+    <div class="section-title">Recent Complaints</div>
+    {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+</div>
+{% endblock %}

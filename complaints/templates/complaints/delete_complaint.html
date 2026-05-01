@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Delete Complaint | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="content-card form-card">
+    <h1 class="h4">Delete Complaint</h1>
+    <p>Are you sure you want to delete <strong>{{ complaint.title }}</strong>? This action cannot be undone.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">Delete</button>
+        <a class="btn btn-outline-secondary" href="{% url 'complaints:detail' complaint.pk %}">Cancel</a>
+    </form>
+</div>
+{% endblock %}

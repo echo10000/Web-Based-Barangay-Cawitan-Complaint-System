@@ -1,119 +1,61 @@
 from django import forms
-from django.contrib.auth.models import User
-from .models import Complaint, ComplaintUpdate, Feedback, Category
+
+from accounts.models import User
+from .models import Complaint, ComplaintCategory, ComplaintResponse, UploadedEvidence
 
 
 class ComplaintForm(forms.ModelForm):
-    """Form for citizens to file a new complaint"""
-    
+    evidence = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+        help_text="Optional: upload an image or supporting document.",
+    )
+
     class Meta:
         model = Complaint
-        fields = ['title', 'description', 'category', 'location', 'attachment']
+        fields = ["category", "title", "description", "incident_location", "incident_date"]
         widgets = {
-            'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Brief title of your complaint'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'placeholder': 'Provide detailed information about your complaint',
-                'rows': 5
-            }),
-            'category': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'location': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Where did this occur?'
-            }),
-            'attachment': forms.FileInput(attrs={
-                'class': 'form-control'
-            }),
+            "category": forms.Select(attrs={"class": "form-select"}),
+            "title": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 5}),
+            "incident_location": forms.TextInput(attrs={"class": "form-control"}),
+            "incident_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = ComplaintCategory.objects.filter(is_active=True)
+        self.fields["category"].required = False
 
 
 class ComplaintUpdateForm(forms.ModelForm):
-    """Form for staff to add updates to a complaint"""
-    
-    class Meta:
-        model = ComplaintUpdate
-        fields = ['message', 'attachment']
-        widgets = {
-            'message': forms.Textarea(attrs={
-                'class': 'form-control',
-                'placeholder': 'Add an update to this complaint',
-                'rows': 4
-            }),
-            'attachment': forms.FileInput(attrs={
-                'class': 'form-control'
-            }),
-        }
-
-
-class FeedbackForm(forms.ModelForm):
-    """Form for citizens to rate complaint resolution"""
-    
-    class Meta:
-        model = Feedback
-        fields = ['rating', 'comment']
-        widgets = {
-            'rating': forms.RadioSelect(attrs={
-                'class': 'form-check-input'
-            }),
-            'comment': forms.Textarea(attrs={
-                'class': 'form-control',
-                'placeholder': 'Any additional comments (optional)',
-                'rows': 3
-            }),
-        }
-
-
-class UserRegistrationForm(forms.ModelForm):
-    """Form for user registration"""
-    
-    password = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter password'
-        })
+    assigned_to = forms.ModelChoiceField(
+        queryset=User.objects.filter(role=User.Role.STAFF),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
-    
-    password_confirm = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Confirm password'
-        })
+    remarks = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Add remarks or response"}),
     )
-    
+
     class Meta:
-        model = User
-        fields = ['username', 'email', 'first_name', 'last_name']
+        model = Complaint
+        fields = ["status", "assigned_to"]
         widgets = {
-            'username': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Username'
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Email address'
-            }),
-            'first_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'First name'
-            }),
-            'last_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Last name'
-            }),
+            "status": forms.Select(attrs={"class": "form-select"}),
         }
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        password = cleaned_data.get('password')
-        password_confirm = cleaned_data.get('password_confirm')
-        
-        if password and password_confirm:
-            if password != password_confirm:
-                raise forms.ValidationError("Passwords do not match!")
-        
-        return cleaned_data
+
+
+class ComplaintResponseForm(forms.ModelForm):
+    class Meta:
+        model = ComplaintResponse
+        fields = ["remarks"]
+        widgets = {"remarks": forms.Textarea(attrs={"class": "form-control", "rows": 4})}
+
+
+class EvidenceForm(forms.ModelForm):
+    class Meta:
+        model = UploadedEvidence
+        fields = ["file"]
+        widgets = {"file": forms.ClearableFileInput(attrs={"class": "form-control"})}

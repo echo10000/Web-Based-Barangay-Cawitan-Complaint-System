@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Resident Dashboard | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header page-header-row">
+    <div>
+        <h1>Resident Dashboard</h1>
+        <p>Submit complaints and track their progress.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'complaints:submit' %}">Submit Complaint</a>
+</div>
+<div class="stats-grid">
+    <div class="stat-card"><span>My Complaints</span><strong>{{ total_complaints }}</strong></div>
+    <div class="stat-card"><span>Pending</span><strong>{{ pending_count }}</strong></div>
+    <div class="stat-card"><span>Resolved</span><strong>{{ resolved_count }}</strong></div>
+</div>
+<div class="row mt-4">
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="section-title">Recent Complaints</div>
+            {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+        </div>
+    </div>
+    <div class="col-lg-4 mt-4 mt-lg-0">
+        <div class="content-card">
+            <div class="section-title">Notifications</div>
+            {% for item in notifications %}
+                <div class="notification-item">{{ item.message }}<br><small>{{ item.created_at|date:"M d, Y h:i A" }}</small></div>
+            {% empty %}
+                <p class="text-muted mb-0">No notifications yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

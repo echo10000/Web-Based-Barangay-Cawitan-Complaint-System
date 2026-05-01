@@ -1,0 +1,11 @@
+{% if status == "PENDING" %}
+    <span class="badge text-bg-warning">Pending</span>
+{% elif status == "UNDER_REVIEW" %}
+    <span class="badge text-bg-info">Under Review</span>
+{% elif status == "IN_PROGRESS" %}
+    <span class="badge text-bg-primary">In Progress</span>
+{% elif status == "RESOLVED" %}
+    <span class="badge text-bg-success">Resolved</span>
+{% elif status == "REJECTED" %}
+    <span class="badge text-bg-danger">Rejected</span>
+{% endif %}

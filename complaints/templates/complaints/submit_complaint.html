@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Submit Complaint | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Submit Complaint</h1>
+    <p>Provide clear details so barangay staff can respond properly.</p>
+</div>
+<div class="content-card form-card">
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">Submit Complaint</button>
+        <a class="btn btn-outline-secondary" href="{% url 'complaints:list' %}">Cancel</a>
+    </form>
+</div>
+{% endblock %}

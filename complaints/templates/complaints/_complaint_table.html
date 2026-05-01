@@ -1,0 +1,30 @@
+<div class="table-responsive">
+    <table class="table align-middle complaint-table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Resident</th>
+                <th>Assigned Staff</th>
+                <th>Date</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for complaint in complaints %}
+                <tr>
+                    <td>{{ complaint.title }}</td>
+                    <td>{{ complaint.category.name|default:"Uncategorized" }}</td>
+                    <td>{% include "complaints/_status_badge.html" with status=complaint.status %}</td>
+                    <td>{{ complaint.resident.get_full_name|default:complaint.resident.username }}</td>
+                    <td>{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username|default:"Unassigned" }}</td>
+                    <td>{{ complaint.created_at|date:"M d, Y" }}</td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="{% url 'complaints:detail' complaint.pk %}">View</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No complaints found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

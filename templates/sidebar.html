@@ -1,0 +1,16 @@
+<aside class="app-sidebar">
+    <div class="sidebar-section">Menu</div>
+    <a href="{% url 'dashboard:home' %}" class="sidebar-link">Dashboard</a>
+    <a href="{% url 'complaints:list' %}" class="sidebar-link">Complaints</a>
+    {% if user.is_resident %}
+        <a href="{% url 'complaints:submit' %}" class="sidebar-link">Submit Complaint</a>
+    {% endif %}
+    {% if user.is_barangay_admin %}
+        <div class="sidebar-section">Admin</div>
+        <a href="{% url 'accounts:residents' %}" class="sidebar-link">Residents</a>
+        <a href="{% url 'accounts:staff' %}" class="sidebar-link">Staff Accounts</a>
+        <a href="{% url 'complaints:reports' %}" class="sidebar-link">Reports</a>
+    {% endif %}
+    <div class="sidebar-section">Account</div>
+    <a href="{% url 'accounts:profile' %}" class="sidebar-link">Edit Profile</a>
+</aside>
