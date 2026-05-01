@@ -10,6 +10,21 @@ This is a Django + MySQL web system for managing barangay resident complaints.
 - HTML, CSS, JavaScript
 - Bootstrap 5
 
+## Version Compatibility
+
+This project pins Django to `5.0.x` because many local XAMPP installations use MariaDB `10.4.x`. Newer Django versions require newer MariaDB versions:
+
+- Django 5.0.x works with MariaDB 10.4.x.
+- Django 5.1.x requires MariaDB 10.5 or later.
+- Django 6.0.x requires MariaDB 10.6 or later.
+
+If your database error says `MariaDB 10.6 or later is required`, reinstall the project dependencies after pulling the latest code:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
 ## Main Roles
 
 - Resident: registers, logs in, submits complaints, uploads evidence, tracks complaint status, edits profile.
