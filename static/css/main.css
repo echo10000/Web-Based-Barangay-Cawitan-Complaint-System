@@ -202,6 +202,190 @@ body {
     justify-content: space-between;
 }
 
+.eyebrow {
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.landing-hero {
+    align-items: center;
+    display: grid;
+    gap: 54px;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 470px);
+    min-height: calc(100vh - 152px);
+    padding: 38px 0 70px;
+}
+
+.landing-copy h1 {
+    font-size: clamp(42px, 7vw, 78px);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: .96;
+    margin-bottom: 22px;
+    max-width: 760px;
+}
+
+.landing-copy .lead {
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1.65;
+    max-width: 650px;
+}
+
+.landing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.btn-outline-primary {
+    border-color: var(--brand);
+    color: var(--brand);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    background: var(--brand);
+    border-color: var(--brand);
+}
+
+.landing-panel {
+    background:
+        linear-gradient(135deg, rgba(23, 107, 88, .14), transparent 45%),
+        #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 22px 55px rgba(15, 23, 42, .12);
+    padding: 22px;
+}
+
+.landing-panel-top {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
+.landing-panel-top span {
+    background: var(--line);
+    border-radius: 999px;
+    height: 11px;
+    width: 11px;
+}
+
+.landing-panel-top span:first-child {
+    background: #c85045;
+}
+
+.landing-panel-top span:nth-child(2) {
+    background: var(--accent);
+}
+
+.landing-panel-top span:last-child {
+    background: var(--brand);
+}
+
+.landing-metrics {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.landing-metrics div {
+    background: #eef7f4;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    min-height: 128px;
+    padding: 20px;
+}
+
+.landing-metrics strong,
+.landing-metrics span {
+    display: block;
+}
+
+.landing-metrics strong {
+    font-size: clamp(30px, 5vw, 48px);
+    line-height: 1;
+    margin-bottom: 10px;
+}
+
+.landing-metrics span {
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.landing-metrics .wide {
+    background: var(--brand-dark);
+    color: #ffffff;
+    grid-column: 1 / -1;
+}
+
+.landing-metrics .wide span {
+    color: rgba(255, 255, 255, .76);
+}
+
+.landing-section {
+    border-top: 1px solid var(--line);
+    padding: 70px 0 78px;
+}
+
+.landing-section-heading {
+    max-width: 680px;
+}
+
+.landing-section h2 {
+    font-size: clamp(30px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.02;
+    margin-bottom: 24px;
+}
+
+.landing-feature-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.landing-feature-grid article {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .04);
+    min-height: 220px;
+    padding: 22px;
+}
+
+.landing-feature-grid span {
+    align-items: center;
+    background: #eef7f4;
+    border-radius: 8px;
+    color: var(--brand-dark);
+    display: inline-flex;
+    font-weight: 800;
+    height: 34px;
+    justify-content: center;
+    margin-bottom: 26px;
+    width: 42px;
+}
+
+.landing-feature-grid h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.landing-feature-grid p {
+    color: var(--muted);
+    line-height: 1.65;
+    margin-bottom: 0;
+}
+
 @media (max-width: 900px) {
     .app-shell {
         display: block;
@@ -216,5 +400,33 @@ body {
     .page-header-row {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .landing-hero {
+        gap: 28px;
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .landing-feature-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .landing-copy h1 {
+        font-size: 40px;
+    }
+
+    .landing-copy .lead {
+        font-size: 18px;
+    }
+
+    .landing-actions .btn {
+        width: 100%;
+    }
+
+    .landing-metrics {
+        grid-template-columns: 1fr;
     }
 }

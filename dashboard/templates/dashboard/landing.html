@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Barangay Cawitan Complaint Portal{% endblock %}
+{% block content %}
+<section class="landing-hero">
+    <div class="landing-copy">
+        <p class="eyebrow">Barangay Cawitan Complaint Portal</p>
+        <h1>Report concerns and track action from one place.</h1>
+        <p class="lead">
+            A simple online front desk for residents, staff, and barangay administrators to manage community complaints with clearer updates.
+        </p>
+        <div class="landing-actions">
+            <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}">Sign in</a>
+            <a class="btn btn-outline-primary btn-lg" href="{% url 'accounts:register' %}">Register as resident</a>
+        </div>
+    </div>
+    <div class="landing-panel" aria-label="Complaint portal overview">
+        <div class="landing-panel-top">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="landing-metrics">
+            <div>
+                <strong>24/7</strong>
+                <span>Online access</span>
+            </div>
+            <div>
+                <strong>3</strong>
+                <span>User roles</span>
+            </div>
+            <div class="wide">
+                <strong>Trackable</strong>
+                <span>Every complaint moves through visible status updates.</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section">
+    <div class="landing-section-heading">
+        <p class="eyebrow">What the portal helps with</p>
+        <h2>Less waiting, clearer coordination.</h2>
+    </div>
+    <div class="landing-feature-grid">
+        <article>
+            <span>01</span>
+            <h3>Submit complaints</h3>
+            <p>Residents can send concerns with the details staff need to start reviewing them.</p>
+        </article>
+        <article>
+            <span>02</span>
+            <h3>Monitor progress</h3>
+            <p>Statuses and notifications keep residents informed as work moves forward.</p>
+        </article>
+        <article>
+            <span>03</span>
+            <h3>Manage response work</h3>
+            <p>Staff and administrators can organize assignments, updates, and records in one system.</p>
+        </article>
+    </div>
+</section>
+{% endblock %}

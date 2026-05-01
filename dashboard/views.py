@@ -7,8 +7,9 @@ from accounts.models import User
 from complaints.models import Complaint, Notification
 
 
-@login_required
 def home_view(request):
+    if not request.user.is_authenticated:
+        return render(request, "dashboard/landing.html")
     if request.user.is_barangay_admin:
         return redirect("dashboard:admin")
     if request.user.is_staff_member:
