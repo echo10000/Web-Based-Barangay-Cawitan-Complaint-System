@@ -1,0 +1,60 @@
+<nav class="navbar navbar-expand-lg app-navbar">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'dashboard:home' %}">
+            <span class="brand-icon"><i class="bi bi-shield-fill-check"></i></span>
+            Barangay Cawitan
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbar" aria-controls="topNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="topNavbar">
+            {% if not user.is_authenticated %}
+                <ul class="navbar-nav me-auto align-items-lg-center">
+                    <li class="nav-item">
+                        <a class="nav-link nav-public-link" href="{% url 'dashboard:home' %}#home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-public-link" href="{% url 'dashboard:home' %}#about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-public-link" href="{% url 'dashboard:home' %}#how-it-works">How It Works</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-public-link" href="{% url 'dashboard:home' %}#categories">Complaint Categories</a>
+                    </li>
+                </ul>
+            {% endif %}
+            <ul class="navbar-nav {% if user.is_authenticated %}ms-auto{% endif %} align-items-lg-center gap-2">
+                {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="navbar-username px-2">
+                            <i class="bi bi-person-circle me-1"></i>{{ user.get_full_name|default:user.username }}
+                        </span>
+                    </li>
+                    {% if not user.is_resident %}
+                    <li class="nav-item">
+                        <form method="post" action="{% url 'accounts:logout' %}">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-danger btn-sm" type="submit">
+                                <i class="bi bi-box-arrow-right me-1"></i>Logout
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                {% else %}
+                    <li class="nav-item navbar-auth-divider d-none d-lg-block"></li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-auth-link" href="{% url 'accounts:login' %}">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-success btn-sm px-3" href="{% url 'accounts:register' %}">
+                            Register
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

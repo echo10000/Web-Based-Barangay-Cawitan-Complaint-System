@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Resident Dashboard | Barangay Cawitan{% endblock %}
+{% block content %}
+
+{# ── Welcome Banner ──────────────────────────────── #}
+<div class="welcome-banner">
+    <div class="welcome-banner-body">
+        <p class="welcome-eyebrow">
+            <i class="bi bi-house-fill me-1"></i>Resident Dashboard
+        </p>
+        <h2 class="welcome-heading">Welcome back, {{ user.get_full_name|default:user.username }}!</h2>
+        <p class="welcome-sub">Track your complaints, submit new concerns, and receive barangay updates.</p>
+    </div>
+    <div class="welcome-banner-action">
+        <a class="btn btn-success" href="{% url 'complaints:submit' %}">
+            <i class="bi bi-plus-circle-fill me-1"></i>Submit Complaint
+        </a>
+    </div>
+    <i class="bi bi-person-fill welcome-banner-deco"></i>
+</div>
+
+{# ── Stats ───────────────────────────────────────── #}
+<div class="stats-grid mt-4">
+    <div class="stat-card stat-card--total">
+        <span><i class="bi bi-clipboard2-data-fill me-1"></i>My Complaints</span>
+        <strong>{{ total_complaints }}</strong>
+    </div>
+    <div class="stat-card stat-card--pending">
+        <span><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+        <strong>{{ pending_count }}</strong>
+    </div>
+    <div class="stat-card stat-card--resolved">
+        <span><i class="bi bi-check-circle-fill me-1"></i>Resolved</span>
+        <strong>{{ resolved_count }}</strong>
+    </div>
+</div>
+
+{# ── Main content row ────────────────────────────── #}
+<div class="row mt-2">
+
+    {# Left — Recent Complaints table #}
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="section-title">Recent Complaints</div>
+            {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+        </div>
+    </div>
+
+    {# Right — sidebar cards #}
+    <div class="col-lg-4 mt-4 mt-lg-0 d-flex flex-column gap-3">
+
+        {# ── 1. Recent Updates (Notifications) ──────── #}
+        <div class="content-card notif-card">
+            <div class="notif-card-header">
+                <span class="notif-card-title">
+                    <i class="bi bi-bell-fill me-1"></i>Recent Updates
+                </span>
+                {% if notifications %}
+                    <span class="notif-count-badge">{{ notifications|length }}</span>
+                {% endif %}
+            </div>
+            {% for item in notifications %}
+                <div class="notif-item {% if not item.is_read %}notif-item--unread{% endif %}">
+                    {% if item.complaint %}
+                        {% with s=item.complaint.status %}
+                        <div class="notif-icon
+                            {% if s == 'RESOLVED' %}notif-icon--success
+                            {% elif s == 'IN_PROGRESS' %}notif-icon--info
+                            {% elif s == 'UNDER_REVIEW' %}notif-icon--purple
+                            {% elif s == 'REJECTED' %}notif-icon--danger
+                            {% elif s == 'PENDING' %}notif-icon--warning
+                            {% else %}notif-icon--navy{% endif %}">
+                            <i class="bi
+                                {% if s == 'RESOLVED' %}bi-check-circle-fill
+                                {% elif s == 'IN_PROGRESS' %}bi-arrow-repeat
+                                {% elif s == 'UNDER_REVIEW' %}bi-search
+                                {% elif s == 'REJECTED' %}bi-x-circle-fill
+                                {% elif s == 'PENDING' %}bi-hourglass-split
+                                {% else %}bi-bell-fill{% endif %}"></i>
+                        </div>
+                        {% endwith %}
+                    {% else %}
+                        <div class="notif-icon notif-icon--navy"><i class="bi bi-bell-fill"></i></div>
+                    {% endif %}
+                    <div class="notif-body">
+                        <p class="notif-message">{{ item.message }}</p>
+                        <div class="notif-meta">
+                            {% if item.complaint %}
+                                <span class="notif-ref">CMP-{{ item.complaint.id|stringformat:"03d" }}</span>
+                            {% endif %}
+                            <span class="notif-time">{{ item.created_at|timesince }} ago</span>
+                            {% if item.complaint %}
+                                <a class="notif-view-link" href="{% url 'complaints:detail' item.complaint.pk %}">
+                                    View <i class="bi bi-arrow-right-short"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if not item.is_read %}<span class="notif-unread-dot"></span>{% endif %}
+                </div>
+            {% empty %}
+                <div class="notif-empty">
+                    <i class="bi bi-bell-slash notif-empty-icon"></i>
+                    <p class="notif-empty-text">No updates yet.</p>
+                    <p class="notif-empty-sub">You'll be notified when your complaint status changes.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        {# ── 2. Profile Completion ───────────────────── #}
+        <div class="content-card profile-complete-card">
+            <div class="profile-complete-header">
+                <div>
+                    <div class="section-title mb-0">Profile Completion</div>
+                    <p class="profile-complete-sub">
+                        {% if profile_completion == 100 %}
+                            Your profile is complete!
+                        {% else %}
+                            Complete your profile so the barangay can contact you faster.
+                        {% endif %}
+                    </p>
+                </div>
+                <span class="profile-pct
+                    {% if profile_completion == 100 %}profile-pct--full
+                    {% elif profile_completion >= 60 %}profile-pct--mid
+                    {% else %}profile-pct--low{% endif %}">
+                    {{ profile_completion }}%
+                </span>
+            </div>
+
+            <div class="progress profile-progress" role="progressbar"
+                 aria-valuenow="{{ profile_completion }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar
+                    {% if profile_completion == 100 %}profile-bar--full
+                    {% elif profile_completion >= 60 %}profile-bar--mid
+                    {% else %}profile-bar--low{% endif %}"
+                    style="width:{{ profile_completion }}%">
+                </div>
+            </div>
+
+            {% if profile_completion < 100 %}
+                <a class="btn btn-outline-primary btn-sm w-100 mt-3" href="{% url 'accounts:profile' %}">
+                    <i class="bi bi-person-gear me-1"></i>Update Profile
+                </a>
+            {% else %}
+                <div class="profile-complete-done">
+                    <i class="bi bi-patch-check-fill me-1"></i>All profile fields are filled in.
+                </div>
+            {% endif %}
+        </div>
+
+        {# ── 3. Help / Contact ───────────────────────── #}
+        <div class="content-card help-card" id="help-card">
+            <div class="section-title">
+                <i class="bi bi-headset me-1"></i>Help &amp; Contact
+            </div>
+            <p class="help-intro">Need assistance? Reach out to the Barangay Cawitan office directly.</p>
+            <ul class="help-contact-list">
+                <li class="help-contact-item">
+                    <span class="help-contact-icon-wrap"><i class="bi bi-telephone-fill"></i></span>
+                    <div>
+                        <div class="help-contact-label">Phone</div>
+                        <div class="help-contact-value">(034) XXX-XXXX</div>
+                    </div>
+                </li>
+                <li class="help-contact-item">
+                    <span class="help-contact-icon-wrap"><i class="bi bi-envelope-fill"></i></span>
+                    <div>
+                        <div class="help-contact-label">Email</div>
+                        <div class="help-contact-value">barangay@cawitan.gov.ph</div>
+                    </div>
+                </li>
+                <li class="help-contact-item">
+                    <span class="help-contact-icon-wrap"><i class="bi bi-geo-alt-fill"></i></span>
+                    <div>
+                        <div class="help-contact-label">Address</div>
+                        <div class="help-contact-value">Barangay Cawitan Hall, Kabankalan City, Negros Occidental</div>
+                    </div>
+                </li>
+                <li class="help-contact-item">
+                    <span class="help-contact-icon-wrap"><i class="bi bi-clock-fill"></i></span>
+                    <div>
+                        <div class="help-contact-label">Office Hours</div>
+                        <div class="help-contact-value">Mon – Fri &nbsp;·&nbsp; 8:00 AM – 5:00 PM</div>
+                    </div>
+                </li>
+            </ul>
+            <a class="btn btn-primary btn-sm w-100 mt-2" href="{% url 'dashboard:home' %}#categories">
+                <i class="bi bi-question-circle-fill me-1"></i>View Complaint Categories
+            </a>
+        </div>
+
+    </div>{# /col-lg-4 #}
+</div>
+{% endblock %}

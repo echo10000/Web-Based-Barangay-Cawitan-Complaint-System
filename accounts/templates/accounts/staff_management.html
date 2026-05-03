@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Staff Accounts | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header page-header-row">
+    <div>
+        <h1>Staff Accounts</h1>
+        <p>Manage barangay staff who process complaints.</p>
+    </div>
+    <a class="btn btn-success" href="{% url 'accounts:create_staff' %}">
+        <i class="bi bi-person-plus-fill me-1"></i>Add Staff
+    </a>
+</div>
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Position</th>
+                    <th>Phone</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for person in staff %}
+                    <tr>
+                        <td class="fw-semibold">{{ person.get_full_name|default:"Not provided" }}</td>
+                        <td>{{ person.username }}</td>
+                        <td>{{ person.email|default:"-" }}</td>
+                        <td>{{ person.staff_profile.position|default:"-" }}</td>
+                        <td>{{ person.staff_profile.phone_number|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-person-badge d-block mb-2" style="font-size:24px;"></i>
+                            No staff accounts yet.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

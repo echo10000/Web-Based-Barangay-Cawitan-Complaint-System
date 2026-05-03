@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Residents | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Residents</h1>
+    <p>Registered resident accounts and contact details.</p>
+</div>
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for resident in residents %}
+                    <tr>
+                        <td class="fw-semibold">{{ resident.get_full_name|default:"Not provided" }}</td>
+                        <td>{{ resident.username }}</td>
+                        <td>{{ resident.email|default:"-" }}</td>
+                        <td>{{ resident.resident_profile.phone_number|default:"-" }}</td>
+                        <td>{{ resident.resident_profile.address|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-people d-block mb-2" style="font-size:24px;"></i>
+                            No residents yet.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

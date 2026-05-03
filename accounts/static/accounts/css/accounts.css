@@ -1,0 +1,88 @@
+/* ================================================
+   PASSWORD REQUIREMENTS CHECKLIST
+   ================================================ */
+.password-requirements {
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    margin-top: 8px;
+    padding: 10px 14px;
+}
+
+.req-item {
+    align-items: center;
+    color: #6B7280;
+    display: flex;
+    font-size: 13px;
+    gap: 8px;
+    padding: 4px 0;
+    transition: color .22s ease;
+}
+
+.req-item i {
+    color: #9CA3AF;
+    flex-shrink: 0;
+    font-size: 14px;
+    transition: color .22s ease;
+}
+
+/* Met — turns green */
+.req-item.req-met {
+    color: #166534;
+}
+
+.req-item.req-met i {
+    color: #16A34A;
+}
+
+/* Fail — turns red */
+.req-item.req-fail {
+    color: #991B1B;
+}
+
+.req-item.req-fail i {
+    color: #DC2626;
+}
+
+/* Static info items (server-side only, always gray) */
+.req-item.req-static {
+    color: #9CA3AF;
+}
+
+.req-item.req-static i {
+    color: #9CA3AF;
+}
+
+/* Standalone match indicator (outside the requirements box) */
+.req-match-row {
+    align-items: center;
+    color: #6B7280;
+    display: flex;
+    font-size: 13px;
+    gap: 8px;
+    margin-top: 6px;
+    transition: color .22s ease;
+}
+
+.req-match-row i {
+    color: #9CA3AF;
+    flex-shrink: 0;
+    font-size: 14px;
+    transition: color .22s ease;
+}
+
+.req-match-row.req-met {
+    color: #166534;
+}
+
+.req-match-row.req-met i {
+    color: #16A34A;
+}
+
+.req-match-row.req-fail {
+    color: #991B1B;
+}
+
+.req-match-row.req-fail i {
+    color: #DC2626;
+}

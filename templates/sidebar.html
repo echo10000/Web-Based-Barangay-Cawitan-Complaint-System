@@ -1,0 +1,161 @@
+{% url 'dashboard:home'       as url_home %}
+{% url 'dashboard:resident'   as url_resident %}
+{% url 'dashboard:staff'      as url_staff %}
+{% url 'dashboard:admin'      as url_admin %}
+{% url 'complaints:list'      as url_complaints %}
+{% url 'complaints:submit'    as url_submit %}
+{% url 'accounts:profile'     as url_profile %}
+{% url 'accounts:residents'   as url_residents %}
+{% url 'accounts:staff'       as url_staff_mgmt %}
+{% url 'complaints:reports'   as url_reports %}
+{% url 'accounts:logout'      as url_logout %}
+
+<aside class="app-sidebar">
+
+    {# ─────────────────────────────────────────────── #}
+    {# ADMIN — checked FIRST so superusers whose role  #}
+    {# defaulted to RESIDENT still see the admin menu  #}
+    {# ─────────────────────────────────────────────── #}
+    {% if user.is_barangay_admin %}
+
+        <div class="sidebar-section">Menu</div>
+
+        <a href="{{ url_admin }}"
+           class="sidebar-link {% if request.path == url_admin or request.path == url_home %}active{% endif %}">
+            <i class="bi bi-grid-fill"></i>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="{{ url_complaints }}"
+           class="sidebar-link {% if request.path == url_complaints %}active{% endif %}">
+            <i class="bi bi-clipboard-check-fill"></i>
+            <span>Complaints</span>
+        </a>
+
+        <div class="sidebar-section">Admin</div>
+
+        <a href="{{ url_residents }}"
+           class="sidebar-link {% if request.path == url_residents %}active{% endif %}">
+            <i class="bi bi-people-fill"></i>
+            <span>Residents</span>
+        </a>
+
+        <a href="{{ url_staff_mgmt }}"
+           class="sidebar-link {% if request.path == url_staff_mgmt %}active{% endif %}">
+            <i class="bi bi-person-badge-fill"></i>
+            <span>Staff Accounts</span>
+        </a>
+
+        <a href="{{ url_reports }}"
+           class="sidebar-link {% if request.path == url_reports %}active{% endif %}">
+            <i class="bi bi-bar-chart-fill"></i>
+            <span>Reports</span>
+        </a>
+
+        <div class="sidebar-section">Account</div>
+
+        <a href="{{ url_profile }}"
+           class="sidebar-link {% if request.path == url_profile %}active{% endif %}">
+            <i class="bi bi-person-gear"></i>
+            <span>Edit Profile</span>
+        </a>
+
+        <form method="post" action="{{ url_logout }}" class="sidebar-logout-form">
+            {% csrf_token %}
+            <button type="submit" class="sidebar-link sidebar-logout-btn">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+
+    {# ─────────────────────────────────────────────── #}
+    {# STAFF                                           #}
+    {# ─────────────────────────────────────────────── #}
+    {% elif user.is_staff_member %}
+
+        <div class="sidebar-section">Menu</div>
+
+        <a href="{{ url_staff }}"
+           class="sidebar-link {% if request.path == url_staff or request.path == url_home %}active{% endif %}">
+            <i class="bi bi-grid-fill"></i>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="{{ url_complaints }}"
+           class="sidebar-link {% if request.path == url_complaints %}active{% endif %}">
+            <i class="bi bi-clipboard-check-fill"></i>
+            <span>Complaints</span>
+        </a>
+
+        <div class="sidebar-section">Account</div>
+
+        <a href="{{ url_profile }}"
+           class="sidebar-link {% if request.path == url_profile %}active{% endif %}">
+            <i class="bi bi-person-gear"></i>
+            <span>Edit Profile</span>
+        </a>
+
+        <form method="post" action="{{ url_logout }}" class="sidebar-logout-form">
+            {% csrf_token %}
+            <button type="submit" class="sidebar-link sidebar-logout-btn">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+
+    {# ─────────────────────────────────────────────── #}
+    {# RESIDENT                                        #}
+    {# ─────────────────────────────────────────────── #}
+    {% elif user.is_resident %}
+
+        <div class="sidebar-section">Menu</div>
+
+        <a href="{{ url_resident }}"
+           class="sidebar-link {% if request.path == url_resident or request.path == url_home %}active{% endif %}">
+            <i class="bi bi-grid-fill"></i>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="{{ url_submit }}"
+           class="sidebar-link {% if request.path == url_submit %}active{% endif %}">
+            <i class="bi bi-plus-circle-fill"></i>
+            <span>Submit Complaint</span>
+        </a>
+
+        <a href="{{ url_complaints }}"
+           class="sidebar-link {% if request.path == url_complaints %}active{% endif %}">
+            <i class="bi bi-clipboard2-data-fill"></i>
+            <span>My Complaints</span>
+        </a>
+
+        <a href="{{ url_resident }}#notifications"
+           class="sidebar-link">
+            <i class="bi bi-bell-fill"></i>
+            <span>Notifications</span>
+        </a>
+
+        <div class="sidebar-section">Account</div>
+
+        <a href="{{ url_profile }}"
+           class="sidebar-link {% if request.path == url_profile %}active{% endif %}">
+            <i class="bi bi-person-circle"></i>
+            <span>Profile</span>
+        </a>
+
+        <a href="{{ url_resident }}#help-card"
+           class="sidebar-link">
+            <i class="bi bi-question-circle-fill"></i>
+            <span>Help</span>
+        </a>
+
+        <form method="post" action="{{ url_logout }}" class="sidebar-logout-form">
+            {% csrf_token %}
+            <button type="submit" class="sidebar-link sidebar-logout-btn">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </button>
+        </form>
+
+    {% endif %}
+
+</aside>

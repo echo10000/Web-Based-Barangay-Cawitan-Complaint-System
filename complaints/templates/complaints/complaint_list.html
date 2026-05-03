@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Complaints | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header page-header-row">
+    <div>
+        <h1>Complaints</h1>
+        <p>View and track complaint records.</p>
+    </div>
+    {% if user.is_resident %}
+        <a class="btn btn-primary" href="{% url 'complaints:submit' %}">
+            <i class="bi bi-plus-circle-fill me-1"></i>Submit Complaint
+        </a>
+    {% endif %}
+</div>
+<div class="content-card mb-3">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Filter by status</label>
+            <select name="status" class="form-select">
+                <option value="">All statuses</option>
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-auto">
+            <button class="btn btn-outline-primary" type="submit">
+                <i class="bi bi-funnel-fill me-1"></i>Apply
+            </button>
+        </div>
+    </form>
+</div>
+<div class="content-card">
+    {% include "complaints/_complaint_table.html" %}
+</div>
+{% endblock %}

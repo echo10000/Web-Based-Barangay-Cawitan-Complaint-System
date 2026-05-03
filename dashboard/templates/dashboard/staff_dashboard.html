@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Staff Dashboard | Barangay Cawitan{% endblock %}
+{% block content %}
+
+<div class="welcome-banner welcome-banner--staff">
+    <div class="welcome-banner-body">
+        <p class="welcome-eyebrow">
+            <i class="bi bi-person-badge-fill me-1"></i>Staff Dashboard
+        </p>
+        <h2 class="welcome-heading">Welcome back, {{ user.get_full_name|default:user.username }}!</h2>
+        <p class="welcome-sub">Review assigned complaints and keep residents informed about their concerns.</p>
+    </div>
+    <i class="bi bi-person-badge-fill welcome-banner-deco"></i>
+</div>
+
+<div class="stats-grid mt-4">
+    <div class="stat-card stat-card--total">
+        <span><i class="bi bi-clipboard2-data-fill me-1"></i>Assigned</span>
+        <strong>{{ assigned_count }}</strong>
+    </div>
+    <div class="stat-card stat-card--inprogress">
+        <span><i class="bi bi-arrow-repeat me-1"></i>In Progress</span>
+        <strong>{{ in_progress_count }}</strong>
+    </div>
+    <div class="stat-card stat-card--resolved">
+        <span><i class="bi bi-check-circle-fill me-1"></i>Resolved</span>
+        <strong>{{ resolved_count }}</strong>
+    </div>
+</div>
+
+<div class="content-card mt-2">
+    <div class="section-title">Assigned Complaints</div>
+    {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+</div>
+{% endblock %}

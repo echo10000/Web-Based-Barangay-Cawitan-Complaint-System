@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Complaint Detail | Barangay Cawitan{% endblock %}
+{% block content %}
+
+<div class="page-header page-header-row">
+    <div>
+        <h1>{{ complaint.title }}</h1>
+        <p>Complaint #{{ complaint.id }} &mdash; submitted on {{ complaint.created_at|date:"M d, Y h:i A" }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if user.is_staff_member or user.is_barangay_admin %}
+            <a class="btn btn-success" href="{% url 'complaints:update' complaint.pk %}">
+                <i class="bi bi-pencil-fill me-1"></i>Update
+            </a>
+        {% endif %}
+        {% if user.is_barangay_admin %}
+            <a class="btn btn-outline-danger" href="{% url 'complaints:delete' complaint.pk %}">
+                <i class="bi bi-trash3-fill me-1"></i>Delete
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+{# ── STATUS PROGRESS TRACKER ─────────────────────── #}
+{% with s=complaint.status %}
+<div class="content-card status-tracker-card mb-4">
+    <div class="tracker-header">
+        <span class="tracker-title">
+            <i class="bi bi-signpost-2-fill me-1"></i>Complaint Progress
+        </span>
+        {% include "complaints/_status_badge.html" with status=complaint.status %}
+    </div>
+
+    {% if s == 'REJECTED' %}
+        <div class="tracker-rejected-notice">
+            <i class="bi bi-x-octagon-fill"></i>
+            <span>This complaint has been marked as <strong>Rejected</strong>. Please contact the barangay office for more information.</span>
+        </div>
+    {% else %}
+
+    <div class="status-tracker">
+
+        {# Step 1 — Submitted #}
+        <div class="tracker-step {% if s == 'PENDING' %}step--active{% else %}step--done{% endif %}">
+            <div class="tracker-dot">
+                {% if s == 'PENDING' %}
+                    <i class="bi bi-send-fill"></i>
+                {% else %}
+                    <i class="bi bi-check-lg"></i>
+                {% endif %}
+            </div>
+            <span class="tracker-label">Submitted</span>
+        </div>
+
+        {# Connector 1 → 2 #}
+        <div class="tracker-connector {% if s == 'UNDER_REVIEW' or s == 'IN_PROGRESS' or s == 'RESOLVED' %}connector--done{% endif %}"></div>
+
+        {# Step 2 — Under Review #}
+        <div class="tracker-step {% if s == 'UNDER_REVIEW' %}step--active{% elif s == 'IN_PROGRESS' or s == 'RESOLVED' %}step--done{% endif %}">
+            <div class="tracker-dot">
+                {% if s == 'IN_PROGRESS' or s == 'RESOLVED' %}
+                    <i class="bi bi-check-lg"></i>
+                {% elif s == 'UNDER_REVIEW' %}
+                    <i class="bi bi-search"></i>
+                {% else %}
+                    <span>2</span>
+                {% endif %}
+            </div>
+            <span class="tracker-label">Under Review</span>
+        </div>
+
+        {# Connector 2 → 3 #}
+        <div class="tracker-connector {% if s == 'IN_PROGRESS' or s == 'RESOLVED' %}connector--done{% endif %}"></div>
+
+        {# Step 3 — In Progress #}
+        <div class="tracker-step {% if s == 'IN_PROGRESS' %}step--active{% elif s == 'RESOLVED' %}step--done{% endif %}">
+            <div class="tracker-dot">
+                {% if s == 'RESOLVED' %}
+                    <i class="bi bi-check-lg"></i>
+                {% elif s == 'IN_PROGRESS' %}
+                    <i class="bi bi-arrow-repeat"></i>
+                {% else %}
+                    <span>3</span>
+                {% endif %}
+            </div>
+            <span class="tracker-label">In Progress</span>
+        </div>
+
+        {# Connector 3 → 4 #}
+        <div class="tracker-connector {% if s == 'RESOLVED' %}connector--done{% endif %}"></div>
+
+        {# Step 4 — Resolved #}
+        <div class="tracker-step {% if s == 'RESOLVED' %}step--active step--resolved{% endif %}">
+            <div class="tracker-dot">
+                {% if s == 'RESOLVED' %}
+                    <i class="bi bi-check-circle-fill"></i>
+                {% else %}
+                    <span>4</span>
+                {% endif %}
+            </div>
+            <span class="tracker-label">Resolved</span>
+        </div>
+
+    </div>
+    {% endif %}
+</div>
+{% endwith %}
+
+{# ── MAIN CONTENT ─────────────────────────────────── #}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="content-card">
+            <h2 class="h6 fw-bold text-muted text-uppercase mb-3" style="letter-spacing:.06em;font-size:11px;">Complaint Details</h2>
+            <p style="font-size:15px;">{{ complaint.description|linebreaks }}</p>
+            <dl class="row detail-list mt-3">
+                <dt class="col-sm-4">Category</dt>
+                <dd class="col-sm-8">{{ complaint.category.name|default:"Uncategorized" }}</dd>
+                <dt class="col-sm-4">Incident Location</dt>
+                <dd class="col-sm-8">{{ complaint.incident_location }}</dd>
+                <dt class="col-sm-4">Incident Date</dt>
+                <dd class="col-sm-8">{{ complaint.incident_date|default:"Not provided" }}</dd>
+                <dt class="col-sm-4">Resident</dt>
+                <dd class="col-sm-8">{{ complaint.resident.get_full_name|default:complaint.resident.username }}</dd>
+                <dt class="col-sm-4">Contact Number</dt>
+                <dd class="col-sm-8">
+                    {% if complaint.contact_number %}
+                        <a href="tel:{{ complaint.contact_number }}" class="detail-contact-link">
+                            <i class="bi bi-telephone-fill me-1"></i>{{ complaint.contact_number }}
+                        </a>
+                    {% else %}
+                        <span class="text-muted">Not provided</span>
+                    {% endif %}
+                </dd>
+                <dt class="col-sm-4">Assigned Staff</dt>
+                <dd class="col-sm-8">{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</dd>
+            </dl>
+        </div>
+        <div class="content-card mt-4">
+            <div class="section-title"><i class="bi bi-chat-left-text-fill me-1"></i>Responses / Remarks</div>
+            {% for response in complaint.responses.all %}
+                <div class="timeline-item">
+                    <strong>{% if response.responder %}{{ response.responder.get_full_name|default:response.responder.username }}{% else %}Staff{% endif %}</strong>
+                    <small>{{ response.created_at|date:"M d, Y h:i A" }}</small>
+                    <p>{{ response.remarks|linebreaks }}</p>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0" style="font-size:14px;">
+                    <i class="bi bi-chat-left me-1"></i>No responses yet.
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-lg-4 mt-4 mt-lg-0">
+        <div class="content-card">
+            <div class="section-title"><i class="bi bi-paperclip me-1"></i>Evidence</div>
+            {% for evidence in complaint.evidence_files.all %}
+                <a class="evidence-link" href="{{ evidence.file.url }}" target="_blank">
+                    <i class="bi bi-file-earmark me-1"></i>{{ evidence.file.name }}
+                </a>
+            {% empty %}
+                <p class="text-muted mb-0" style="font-size:14px;">No uploaded evidence.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

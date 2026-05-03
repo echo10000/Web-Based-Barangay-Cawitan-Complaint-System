@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Barangay Cawitan Complaint Portal{% endblock %}
+{% block content %}
+
+{# ── HERO ───────────────────────────────────────── #}
+<section class="landing-hero" id="home">
+    <div class="landing-copy">
+        <p class="eyebrow">Barangay Cawitan &mdash; Official Complaint Portal</p>
+        <h1>Report concerns and track action from one place.</h1>
+        <p class="lead">
+            A simple online front desk for residents, staff, and barangay administrators
+            to manage community complaints with clearer updates.
+        </p>
+        <div class="landing-actions">
+            <a class="btn btn-primary btn-lg" href="{% url 'accounts:login' %}">
+                <i class="bi bi-box-arrow-in-right me-1"></i>Sign in
+            </a>
+            <a class="btn btn-outline-primary btn-lg" href="{% url 'accounts:register' %}">
+                Register as resident
+            </a>
+        </div>
+    </div>
+    <div class="landing-panel" aria-label="Complaint portal overview">
+        <div class="landing-panel-top">
+            <span></span><span></span><span></span>
+        </div>
+        <div class="landing-metrics">
+            <div>
+                <strong>24/7</strong>
+                <span>Online access</span>
+            </div>
+            <div>
+                <strong>3</strong>
+                <span>User roles</span>
+            </div>
+            <div class="wide">
+                <strong>Trackable</strong>
+                <span>Every complaint moves through visible status updates.</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ── ABOUT ──────────────────────────────────────── #}
+<section class="landing-section" id="about">
+    <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+            <p class="eyebrow">About the System</p>
+            <h2 class="landing-sec-h2">A digital front desk for the barangay.</h2>
+            <p class="text-muted" style="font-size:16px; line-height:1.75;">
+                The Barangay Cawitan Complaint Management System is an official online
+                platform designed to make it easier for residents to file complaints and
+                for barangay staff to respond to them efficiently.
+            </p>
+            <p class="text-muted" style="font-size:16px; line-height:1.75;">
+                No more long waits or unclear processes &mdash; everything is tracked,
+                time-stamped, and visible to the right people.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="landing-role-grid">
+                <div class="landing-role-card">
+                    <div class="landing-role-icon" style="background:#EFF6FF; color:#1E3A8A;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="landing-role-title">Residents</h5>
+                        <p class="landing-role-desc">Register, submit complaints, upload evidence, and track every status update.</p>
+                    </div>
+                </div>
+                <div class="landing-role-card">
+                    <div class="landing-role-icon" style="background:#ECFDF5; color:#10B981;">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="landing-role-title">Barangay Staff</h5>
+                        <p class="landing-role-desc">Review assigned complaints, post updates, and mark resolutions with remarks.</p>
+                    </div>
+                </div>
+                <div class="landing-role-card">
+                    <div class="landing-role-icon" style="background:#FEF3C7; color:#D97706;">
+                        <i class="bi bi-shield-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="landing-role-title">Administrators</h5>
+                        <p class="landing-role-desc">Oversee all complaints, manage staff accounts, assign cases, and generate reports.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ── HOW IT WORKS ───────────────────────────────── #}
+<section class="landing-section" id="how-it-works">
+    <div class="landing-section-heading">
+        <p class="eyebrow">The Process</p>
+        <h2 class="landing-sec-h2">How it works</h2>
+        <p class="text-muted mb-4" style="font-size:16px;">
+            Filing and resolving a complaint is a straightforward four-step process.
+        </p>
+    </div>
+    <div class="landing-steps">
+        <div class="landing-step">
+            <div class="landing-step-num">1</div>
+            <div class="landing-step-icon"><i class="bi bi-person-plus-fill"></i></div>
+            <h3 class="landing-step-title">Register &amp; Sign In</h3>
+            <p class="landing-step-desc">Create a free resident account using your name and contact details.</p>
+        </div>
+        <div class="landing-step-arrow d-none d-lg-flex"><i class="bi bi-arrow-right"></i></div>
+        <div class="landing-step">
+            <div class="landing-step-num">2</div>
+            <div class="landing-step-icon"><i class="bi bi-clipboard2-plus-fill"></i></div>
+            <h3 class="landing-step-title">Submit a Complaint</h3>
+            <p class="landing-step-desc">Fill in the complaint form, choose a category, describe the issue, and attach evidence.</p>
+        </div>
+        <div class="landing-step-arrow d-none d-lg-flex"><i class="bi bi-arrow-right"></i></div>
+        <div class="landing-step">
+            <div class="landing-step-num">3</div>
+            <div class="landing-step-icon"><i class="bi bi-search"></i></div>
+            <h3 class="landing-step-title">Staff Reviews</h3>
+            <p class="landing-step-desc">Barangay staff is assigned and begins reviewing your complaint with posted updates.</p>
+        </div>
+        <div class="landing-step-arrow d-none d-lg-flex"><i class="bi bi-arrow-right"></i></div>
+        <div class="landing-step">
+            <div class="landing-step-num">4</div>
+            <div class="landing-step-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <h3 class="landing-step-title">Get Resolved</h3>
+            <p class="landing-step-desc">You receive a notification when your complaint is resolved. Track it all the way through.</p>
+        </div>
+    </div>
+</section>
+
+{# ── COMPLAINT CATEGORIES ───────────────────────── #}
+<section class="landing-section" id="categories">
+    <div class="landing-section-heading">
+        <p class="eyebrow">Complaint Categories</p>
+        <h2 class="landing-sec-h2">What you can report.</h2>
+        <p class="text-muted mb-4" style="font-size:16px;">
+            Select the category that best matches your concern when submitting a complaint.
+        </p>
+    </div>
+    <div class="landing-cat-grid">
+        <div class="landing-cat-item">
+            <i class="bi bi-volume-up-fill landing-cat-icon"></i>
+            <span class="landing-cat-name">Noise Complaint</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-trash3-fill landing-cat-icon"></i>
+            <span class="landing-cat-name">Garbage &amp; Sanitation</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-cone-striped landing-cat-icon"></i>
+            <span class="landing-cat-name">Road &amp; Drainage Issues</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-people-fill landing-cat-icon"></i>
+            <span class="landing-cat-name">Neighbor Dispute</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-emoji-smile-fill landing-cat-icon"></i>
+            <span class="landing-cat-name">Animal Concern</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-shield-fill landing-cat-icon"></i>
+            <span class="landing-cat-name">Safety &amp; Security</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-lightbulb-fill landing-cat-icon"></i>
+            <span class="landing-cat-name">Street Lighting</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-car-front-fill landing-cat-icon"></i>
+            <span class="landing-cat-name">Illegal Parking / Obstruction</span>
+        </div>
+        <div class="landing-cat-item">
+            <i class="bi bi-building-exclamation landing-cat-icon"></i>
+            <span class="landing-cat-name">Public Property Damage</span>
+        </div>
+        <div class="landing-cat-item landing-cat-item--others">
+            <i class="bi bi-three-dots landing-cat-icon"></i>
+            <span class="landing-cat-name">Others</span>
+        </div>
+    </div>
+    <div class="text-center mt-5">
+        <a class="btn btn-primary btn-lg" href="{% url 'accounts:register' %}">
+            <i class="bi bi-person-plus-fill me-1"></i>Register to File a Complaint
+        </a>
+    </div>
+</section>
+
+{% endblock %}

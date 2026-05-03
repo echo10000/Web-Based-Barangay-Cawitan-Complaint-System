@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard | Barangay Cawitan{% endblock %}
+
+{% block content %}
+
+{# ── Admin Welcome Card ──────────────────────────── #}
+<div class="admin-welcome-card">
+    <div class="admin-welcome-left">
+        <div class="admin-welcome-icon-wrap">
+            <i class="bi bi-shield-fill-check"></i>
+        </div>
+        <div>
+            <p class="admin-welcome-eyebrow">
+                <i class="bi bi-circle-fill me-1" style="font-size:7px;vertical-align:middle;"></i>
+                Administrator &nbsp;&middot;&nbsp; Barangay Cawitan
+            </p>
+            <h1 class="admin-welcome-heading">
+                Welcome, {{ user.get_full_name|default:"Admin" }}!
+            </h1>
+            <p class="admin-welcome-sub">
+                Monitor barangay complaints, assign staff, update statuses, and generate reports.
+            </p>
+            <div class="admin-welcome-actions">
+                <a class="btn admin-btn-primary" href="{% url 'complaints:list' %}">
+                    <i class="bi bi-clipboard-check-fill me-1"></i>View Complaints
+                </a>
+                <a class="btn admin-btn-outline" href="{% url 'complaints:reports' %}">
+                    <i class="bi bi-bar-chart-fill me-1"></i>Reports
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="admin-welcome-right d-none d-lg-flex">
+        <div class="admin-stat-pill">
+            <span class="admin-stat-pill-num">{{ total_complaints }}</span>
+            <span class="admin-stat-pill-label">Total Complaints</span>
+        </div>
+        <div class="admin-stat-pill">
+            <span class="admin-stat-pill-num" style="color:#F59E0B;">{{ pending_count }}</span>
+            <span class="admin-stat-pill-label">Pending</span>
+        </div>
+        <div class="admin-stat-pill">
+            <span class="admin-stat-pill-num" style="color:#16A34A;">{{ resolved_count }}</span>
+            <span class="admin-stat-pill-label">Resolved</span>
+        </div>
+    </div>
+    <i class="bi bi-shield-fill admin-welcome-deco"></i>
+</div>
+
+{# ── Stats Grid ──────────────────────────────────── #}
+<div class="stats-grid admin-stats-grid mt-4">
+    <div class="stat-card stat-card--inprogress">
+        <div class="stat-card-icon-wrap" style="background:#DBEAFE;">
+            <i class="bi bi-arrow-repeat" style="color:#2563EB;"></i>
+        </div>
+        <span>In Progress</span>
+        <strong>{{ in_progress_count }}</strong>
+        <p class="stat-card-desc">Currently being handled</p>
+    </div>
+    <div class="stat-card stat-card--danger">
+        <div class="stat-card-icon-wrap" style="background:#FEE2E2;">
+            <i class="bi bi-exclamation-triangle-fill" style="color:#DC2626;"></i>
+        </div>
+        <span>Urgent Complaints</span>
+        <strong>{{ urgent_count }}</strong>
+        <p class="stat-card-desc">Pending over 3 days</p>
+    </div>
+    <div class="stat-card stat-card--emerald">
+        <div class="stat-card-icon-wrap" style="background:#ECFDF5;">
+            <i class="bi bi-people-fill" style="color:#10B981;"></i>
+        </div>
+        <span>Registered Residents</span>
+        <strong>{{ resident_count }}</strong>
+        <p class="stat-card-desc">Total user accounts</p>
+    </div>
+    <div class="stat-card stat-card--info">
+        <div class="stat-card-icon-wrap" style="background:#EFF6FF;">
+            <i class="bi bi-person-badge-fill" style="color:#2563EB;"></i>
+        </div>
+        <span>Active Staff</span>
+        <strong>{{ staff_count }}</strong>
+        <p class="stat-card-desc">Staff in the system</p>
+    </div>
+</div>
+
+{# ── Charts Row 1: Status donut + Category bar ───── #}
+<div class="row mt-4 g-3">
+
+    <div class="col-lg-5">
+        <div class="content-card chart-card h-100">
+            <div class="chart-card-header">
+                <div class="chart-card-title">
+                    <i class="bi bi-pie-chart-fill me-1"></i>Complaints by Status
+                </div>
+                <span class="chart-card-sub">Current breakdown</span>
+            </div>
+            <div class="chart-canvas-wrap chart-canvas-sm">
+                <canvas id="chartStatus"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="content-card chart-card h-100">
+            <div class="chart-card-header">
+                <div class="chart-card-title">
+                    <i class="bi bi-tags-fill me-1"></i>Complaints by Category
+                </div>
+                <span class="chart-card-sub">Top complaint types</span>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="chartCategory"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{# ── Charts Row 2: Monthly line + Urgent list ─────── #}
+<div class="row mt-3 g-3">
+
+    <div class="col-lg-8">
+        <div class="content-card chart-card h-100">
+            <div class="chart-card-header">
+                <div class="chart-card-title">
+                    <i class="bi bi-graph-up-arrow me-1"></i>Monthly Complaint Reports
+                </div>
+                <span class="chart-card-sub">Last 12 months</span>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="chartMonthly"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="content-card chart-card h-100">
+            <div class="chart-card-header">
+                <div class="chart-card-title">
+                    <i class="bi bi-exclamation-triangle-fill me-1" style="color:#DC2626;"></i>Urgent Complaints
+                </div>
+                <span class="chart-card-sub">Pending &gt; 3 days</span>
+            </div>
+            {% if urgent_complaints %}
+                <ul class="urgent-list">
+                    {% for c in urgent_complaints %}
+                        <li class="urgent-list-item">
+                            <div class="urgent-list-dot"></div>
+                            <div class="urgent-list-body">
+                                <a class="urgent-list-title" href="{% url 'complaints:detail' c.pk %}">
+                                    {{ c.title }}
+                                </a>
+                                <div class="urgent-list-meta">
+                                    <span>{{ c.category.name|default:"Uncategorized" }}</span>
+                                    <span>&middot;</span>
+                                    <span>{{ c.created_at|timesince }} ago</span>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="urgent-empty">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <p>No urgent complaints right now.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{# ── Recent Complaints ───────────────────────────── #}
+<div class="content-card mt-3">
+    <div class="section-title">Recent Complaints</div>
+    {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+</div>
+
+{# ── Embed chart data safely ─────────────────────── #}
+{{ chart_status|json_script:"chartStatusData" }}
+{{ chart_category|json_script:"chartCategoryData" }}
+{{ chart_monthly|json_script:"chartMonthlyData" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const STATUS   = JSON.parse(document.getElementById('chartStatusData').textContent);
+    const CATEGORY = JSON.parse(document.getElementById('chartCategoryData').textContent);
+    const MONTHLY  = JSON.parse(document.getElementById('chartMonthlyData').textContent);
+
+    const STATUS_COLORS = ['#F59E0B','#7C3AED','#2563EB','#16A34A','#DC2626'];
+    const NAVY = '#1E3A8A';
+    const GRID_COLOR = 'rgba(0,0,0,.06)';
+
+    Chart.defaults.font.family = 'Arial, Helvetica, sans-serif';
+    Chart.defaults.font.size   = 12;
+    Chart.defaults.color       = '#6B7280';
+
+    /* ── Complaints by Status — Doughnut ── */
+    new Chart(document.getElementById('chartStatus'), {
+        type: 'doughnut',
+        data: {
+            labels: STATUS.labels,
+            datasets: [{
+                data:            STATUS.data,
+                backgroundColor: STATUS_COLORS,
+                borderWidth:     3,
+                borderColor:     '#ffffff',
+                hoverOffset:     6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 14, usePointStyle: true, pointStyleWidth: 10 }
+                },
+                tooltip: { callbacks: {
+                    label: ctx => ` ${ctx.label}: ${ctx.parsed}`
+                }}
+            }
+        }
+    });
+
+    /* ── Complaints by Category — Horizontal Bar ── */
+    new Chart(document.getElementById('chartCategory'), {
+        type: 'bar',
+        data: {
+            labels: CATEGORY.labels,
+            datasets: [{
+                label:           'Complaints',
+                data:            CATEGORY.data,
+                backgroundColor: NAVY,
+                borderRadius:    5,
+                borderSkipped:   false,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, precision: 0 },
+                    grid:  { color: GRID_COLOR }
+                },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+
+    /* ── Monthly Complaint Reports — Line ── */
+    new Chart(document.getElementById('chartMonthly'), {
+        type: 'line',
+        data: {
+            labels: MONTHLY.labels,
+            datasets: [{
+                label:           'Complaints',
+                data:            MONTHLY.data,
+                borderColor:     NAVY,
+                backgroundColor: 'rgba(30,58,138,.08)',
+                fill:            true,
+                tension:         0.4,
+                pointRadius:     4,
+                pointHoverRadius:6,
+                pointBackgroundColor: NAVY,
+                borderWidth:     2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, precision: 0 },
+                    grid:  { color: GRID_COLOR }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}
