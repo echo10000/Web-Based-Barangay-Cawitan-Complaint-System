@@ -40,8 +40,13 @@
 
     {# Left — Recent Complaints table #}
     <div class="col-lg-8">
-        <div class="content-card">
-            <div class="section-title">Recent Complaints</div>
+        <div class="content-card entity-card">
+            <div class="entity-card-header">
+                <div>
+                    <p class="entity-card-title">Recent Complaints</p>
+                    <p class="entity-card-subtitle">Your newest submitted concerns.</p>
+                </div>
+            </div>
             {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
         </div>
     </div>
@@ -50,54 +55,17 @@
     <div class="col-lg-4 mt-4 mt-lg-0 d-flex flex-column gap-3">
 
         {# ── 1. Recent Updates (Notifications) ──────── #}
-        <div class="content-card notif-card">
+        <div class="content-card notif-card" id="notifications">
             <div class="notif-card-header">
                 <span class="notif-card-title">
                     <i class="bi bi-bell-fill me-1"></i>Recent Updates
                 </span>
-                {% if notifications %}
-                    <span class="notif-count-badge">{{ notifications|length }}</span>
-                {% endif %}
+                <a class="notif-view-link" href="{% url 'complaints:notifications' %}">
+                    View all <i class="bi bi-arrow-right-short"></i>
+                </a>
             </div>
             {% for item in notifications %}
-                <div class="notif-item {% if not item.is_read %}notif-item--unread{% endif %}">
-                    {% if item.complaint %}
-                        {% with s=item.complaint.status %}
-                        <div class="notif-icon
-                            {% if s == 'RESOLVED' %}notif-icon--success
-                            {% elif s == 'IN_PROGRESS' %}notif-icon--info
-                            {% elif s == 'UNDER_REVIEW' %}notif-icon--purple
-                            {% elif s == 'REJECTED' %}notif-icon--danger
-                            {% elif s == 'PENDING' %}notif-icon--warning
-                            {% else %}notif-icon--navy{% endif %}">
-                            <i class="bi
-                                {% if s == 'RESOLVED' %}bi-check-circle-fill
-                                {% elif s == 'IN_PROGRESS' %}bi-arrow-repeat
-                                {% elif s == 'UNDER_REVIEW' %}bi-search
-                                {% elif s == 'REJECTED' %}bi-x-circle-fill
-                                {% elif s == 'PENDING' %}bi-hourglass-split
-                                {% else %}bi-bell-fill{% endif %}"></i>
-                        </div>
-                        {% endwith %}
-                    {% else %}
-                        <div class="notif-icon notif-icon--navy"><i class="bi bi-bell-fill"></i></div>
-                    {% endif %}
-                    <div class="notif-body">
-                        <p class="notif-message">{{ item.message }}</p>
-                        <div class="notif-meta">
-                            {% if item.complaint %}
-                                <span class="notif-ref">CMP-{{ item.complaint.id|stringformat:"03d" }}</span>
-                            {% endif %}
-                            <span class="notif-time">{{ item.created_at|timesince }} ago</span>
-                            {% if item.complaint %}
-                                <a class="notif-view-link" href="{% url 'complaints:detail' item.complaint.pk %}">
-                                    View <i class="bi bi-arrow-right-short"></i>
-                                </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% if not item.is_read %}<span class="notif-unread-dot"></span>{% endif %}
-                </div>
+                {% include "complaints/_notification_item.html" with item=item %}
             {% empty %}
                 <div class="notif-empty">
                     <i class="bi bi-bell-slash notif-empty-icon"></i>
@@ -181,7 +149,7 @@
                     <span class="help-contact-icon-wrap"><i class="bi bi-clock-fill"></i></span>
                     <div>
                         <div class="help-contact-label">Office Hours</div>
-                        <div class="help-contact-value">Mon – Fri &nbsp;·&nbsp; 8:00 AM – 5:00 PM</div>
+                        <div class="help-contact-value">Mon - Fri &nbsp;&middot;&nbsp; 8:00 AM - 5:00 PM</div>
                     </div>
                 </li>
             </ul>

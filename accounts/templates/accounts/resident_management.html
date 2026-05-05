@@ -5,9 +5,15 @@
     <h1>Residents</h1>
     <p>Registered resident accounts and contact details.</p>
 </div>
-<div class="content-card">
+<div class="content-card entity-card">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Resident Directory</p>
+            <p class="entity-card-subtitle">{{ residents|length }} registered account{{ residents|length|pluralize }}</p>
+        </div>
+    </div>
     <div class="table-responsive">
-        <table class="table align-middle">
+        <table class="table align-middle entity-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -20,7 +26,7 @@
             <tbody>
                 {% for resident in residents %}
                     <tr>
-                        <td class="fw-semibold">{{ resident.get_full_name|default:"Not provided" }}</td>
+                        <td>{{ resident.get_full_name|default:"Not provided" }}</td>
                         <td>{{ resident.username }}</td>
                         <td>{{ resident.email|default:"-" }}</td>
                         <td>{{ resident.resident_profile.phone_number|default:"-" }}</td>
@@ -28,9 +34,12 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-4">
-                            <i class="bi bi-people d-block mb-2" style="font-size:24px;"></i>
-                            No residents yet.
+                        <td colspan="5">
+                            <div class="entity-empty">
+                                <i class="bi bi-people entity-empty-icon"></i>
+                                <p class="entity-empty-title">No residents yet.</p>
+                                <p class="entity-empty-subtitle">Registered residents will appear here.</p>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}

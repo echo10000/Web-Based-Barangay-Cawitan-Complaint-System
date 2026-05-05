@@ -10,9 +10,15 @@
         <i class="bi bi-person-plus-fill me-1"></i>Add Staff
     </a>
 </div>
-<div class="content-card">
+<div class="content-card entity-card">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Staff Directory</p>
+            <p class="entity-card-subtitle">{{ staff|length }} staff account{{ staff|length|pluralize }}</p>
+        </div>
+    </div>
     <div class="table-responsive">
-        <table class="table align-middle">
+        <table class="table align-middle entity-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -20,22 +26,29 @@
                     <th>Email</th>
                     <th>Position</th>
                     <th>Phone</th>
+                    <th>Staff Functions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for person in staff %}
                     <tr>
-                        <td class="fw-semibold">{{ person.get_full_name|default:"Not provided" }}</td>
+                        <td>{{ person.get_full_name|default:"Not provided" }}</td>
                         <td>{{ person.username }}</td>
                         <td>{{ person.email|default:"-" }}</td>
                         <td>{{ person.staff_profile.position|default:"-" }}</td>
                         <td>{{ person.staff_profile.phone_number|default:"-" }}</td>
+                        <td class="staff-functions-cell">
+                            {{ person.staff_profile.responsibilities|default:"-"|linebreaksbr }}
+                        </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-4">
-                            <i class="bi bi-person-badge d-block mb-2" style="font-size:24px;"></i>
-                            No staff accounts yet.
+                        <td colspan="6">
+                            <div class="entity-empty">
+                                <i class="bi bi-person-badge entity-empty-icon"></i>
+                                <p class="entity-empty-title">No staff accounts yet.</p>
+                                <p class="entity-empty-subtitle">Add staff members so complaints can be assigned.</p>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}

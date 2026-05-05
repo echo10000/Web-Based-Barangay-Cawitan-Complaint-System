@@ -38,7 +38,7 @@
                 <div class="mb-4">
                     <label class="form-label">{{ field.label }}</label>
                     {# hidden select keeps the actual POST value #}
-                    <div style="display:none;">{{ field }}</div>
+                    <div class="hidden-form-control">{{ field }}</div>
                     <div class="category-grid" id="category-grid">
                         {% for choice_value, choice_label in field.field.choices %}
                             {% if choice_value %}
@@ -60,7 +60,7 @@
             {% elif field.html_name == 'contact_number' %}
                 <div class="mb-3">
                     <label class="form-label" for="{{ field.id_for_label }}">
-                        <i class="bi bi-telephone-fill me-1" style="color:var(--navy);"></i>{{ field.label }}
+                        <i class="bi bi-telephone-fill me-1 icon-text-primary"></i>{{ field.label }}
                     </label>
                     <div class="contact-input-wrap">
                         <span class="contact-input-prefix"><i class="bi bi-telephone"></i></span>

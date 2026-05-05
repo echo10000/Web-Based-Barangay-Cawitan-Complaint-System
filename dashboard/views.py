@@ -8,7 +8,7 @@ from django.db.models.expressions import RawSQL
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import StaffProfile, User
 from complaints.models import Complaint, Notification
 
 
@@ -59,6 +59,7 @@ def staff_dashboard_view(request):
     if not request.user.is_staff_member:
         messages.error(request, "Staff only.")
         return redirect("dashboard:home")
+    StaffProfile.objects.get_or_create(user=request.user)
     complaints = Complaint.objects.filter(assigned_to=request.user)
     return render(
         request,

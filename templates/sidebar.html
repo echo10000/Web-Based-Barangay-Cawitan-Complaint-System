@@ -4,6 +4,7 @@
 {% url 'dashboard:admin'      as url_admin %}
 {% url 'complaints:list'      as url_complaints %}
 {% url 'complaints:submit'    as url_submit %}
+{% url 'complaints:notifications' as url_notifications %}
 {% url 'accounts:profile'     as url_profile %}
 {% url 'accounts:residents'   as url_residents %}
 {% url 'accounts:staff'       as url_staff_mgmt %}
@@ -128,10 +129,13 @@
             <span>My Complaints</span>
         </a>
 
-        <a href="{{ url_resident }}#notifications"
-           class="sidebar-link">
+        <a href="{{ url_notifications }}"
+           class="sidebar-link sidebar-link--with-badge {% if request.path == url_notifications %}active{% endif %}">
             <i class="bi bi-bell-fill"></i>
             <span>Notifications</span>
+            {% if resident_unread_notifications_count %}
+                <span class="sidebar-badge">{{ resident_unread_notifications_count }}</span>
+            {% endif %}
         </a>
 
         <div class="sidebar-section">Account</div>

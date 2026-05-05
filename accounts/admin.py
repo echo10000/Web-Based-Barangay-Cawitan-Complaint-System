@@ -19,5 +19,9 @@ class ResidentProfileAdmin(admin.ModelAdmin):
 
 @admin.register(StaffProfile)
 class StaffProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "position", "phone_number", "created_at")
-    search_fields = ("user__username", "user__first_name", "user__last_name", "position")
+    list_display = ("user", "position", "phone_number", "short_responsibilities", "created_at")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "position", "responsibilities")
+
+    @admin.display(description="Staff functions")
+    def short_responsibilities(self, obj):
+        return (obj.responsibilities[:80] + "...") if len(obj.responsibilities) > 80 else obj.responsibilities

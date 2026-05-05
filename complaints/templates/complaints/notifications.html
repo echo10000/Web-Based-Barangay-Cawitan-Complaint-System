@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Notifications | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header page-header-row">
+    <div>
+        <h1>Notifications</h1>
+        <p>Review updates about your submitted complaints.</p>
+    </div>
+    {% if unread_count %}
+        <form method="post" action="{% url 'complaints:mark_all_notifications_read' %}">
+            {% csrf_token %}
+            <button class="btn btn-outline-primary" type="submit">
+                <i class="bi bi-check2-all me-1"></i>Mark all as read
+            </button>
+        </form>
+    {% endif %}
+</div>
+
+<div class="content-card notif-card notifications-page-card">
+    <div class="notif-card-header">
+        <span class="notif-card-title">
+            <i class="bi bi-bell-fill me-1"></i>All Updates
+        </span>
+        {% if unread_count %}
+            <span class="notif-count-badge">{{ unread_count }} unread</span>
+        {% endif %}
+    </div>
+
+    {% for item in notifications %}
+        {% include "complaints/_notification_item.html" with item=item %}
+    {% empty %}
+        <div class="notif-empty">
+            <i class="bi bi-bell-slash notif-empty-icon"></i>
+            <p class="notif-empty-text">No notifications yet.</p>
+            <p class="notif-empty-sub">Updates will appear here when your complaint status changes.</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

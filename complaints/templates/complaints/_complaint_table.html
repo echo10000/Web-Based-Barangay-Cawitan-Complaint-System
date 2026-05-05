@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    <table class="table align-middle complaint-table">
+    <table class="table align-middle complaint-table entity-table">
         <thead>
             <tr>
                 <th>Title</th>
@@ -14,13 +14,13 @@
         <tbody>
             {% for complaint in complaints %}
                 <tr>
-                    <td class="fw-semibold">{{ complaint.title }}</td>
+                    <td>{{ complaint.title }}</td>
                     <td>{{ complaint.category.name|default:"Uncategorized" }}</td>
                     <td>{% include "complaints/_status_badge.html" with status=complaint.status %}</td>
                     <td>{{ complaint.resident.get_full_name|default:complaint.resident.username }}</td>
                     <td>{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
                     <td class="text-muted">{{ complaint.created_at|date:"M d, Y" }}</td>
-                    <td>
+                    <td class="entity-table-actions">
                         <a class="btn btn-sm btn-outline-primary" href="{% url 'complaints:detail' complaint.pk %}">
                             <i class="bi bi-eye-fill me-1"></i>View
                         </a>
@@ -28,9 +28,12 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
-                        <i class="bi bi-clipboard2-x d-block mb-2" style="font-size:22px;"></i>
-                        No complaints found.
+                    <td colspan="7">
+                        <div class="entity-empty">
+                            <i class="bi bi-clipboard2-x entity-empty-icon"></i>
+                            <p class="entity-empty-title">No complaints found.</p>
+                            <p class="entity-empty-subtitle">Complaint records matching this view will appear here.</p>
+                        </div>
                     </td>
                 </tr>
             {% endfor %}

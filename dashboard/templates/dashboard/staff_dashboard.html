@@ -29,7 +29,19 @@
 </div>
 
 <div class="content-card mt-2">
-    <div class="section-title">Assigned Complaints</div>
+    <div class="section-title">Staff Functions</div>
+    <div class="staff-function-list">
+        {{ user.staff_profile.responsibilities|default:"Receive, review, update, and coordinate assigned complaints."|linebreaksbr }}
+    </div>
+</div>
+
+<div class="content-card entity-card mt-2">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Assigned Complaints</p>
+            <p class="entity-card-subtitle">Complaints currently assigned to you.</p>
+        </div>
+    </div>
     {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
 </div>
 {% endblock %}

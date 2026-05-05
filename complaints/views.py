@@ -64,6 +64,11 @@ def submit_complaint_view(request):
         complaint.save()
         if form.cleaned_data.get("evidence"):
             UploadedEvidence.objects.create(complaint=complaint, file=form.cleaned_data["evidence"])
+        Notification.objects.create(
+            user=request.user,
+            complaint=complaint,
+            message=f"Your complaint '{complaint.title}' was submitted successfully.",
+        )
         messages.success(request, "Complaint submitted successfully.")
         return redirect(complaint.get_absolute_url())
 
@@ -81,7 +86,36 @@ def complaint_detail_view(request, pk):
     if not can_view:
         messages.error(request, "You do not have permission to view this complaint.")
         return redirect("complaints:list")
+    if request.user.is_resident and complaint.resident == request.user:
+        Notification.objects.filter(user=request.user, complaint=complaint, is_read=False).update(is_read=True)
     return render(request, "complaints/complaint_detail.html", {"complaint": complaint})
+
+
+@login_required
+def notifications_view(request):
+    if not request.user.is_resident:
+        messages.error(request, "Notifications are available for residents only.")
+        return redirect("dashboard:home")
+
+    notifications = Notification.objects.filter(user=request.user).select_related("complaint")
+    unread_count = notifications.filter(is_read=False).count()
+    return render(
+        request,
+        "complaints/notifications.html",
+        {"notifications": notifications, "unread_count": unread_count},
+    )
+
+
+@login_required
+def mark_all_notifications_read_view(request):
+    if not request.user.is_resident:
+        messages.error(request, "Notifications are available for residents only.")
+        return redirect("dashboard:home")
+
+    if request.method == "POST":
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        messages.success(request, "All notifications marked as read.")
+    return redirect("complaints:notifications")
 
 
 @login_required

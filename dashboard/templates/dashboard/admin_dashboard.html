@@ -11,7 +11,7 @@
         </div>
         <div>
             <p class="admin-welcome-eyebrow">
-                <i class="bi bi-circle-fill me-1" style="font-size:7px;vertical-align:middle;"></i>
+                <i class="bi bi-circle-fill me-1 admin-welcome-dot"></i>
                 Administrator &nbsp;&middot;&nbsp; Barangay Cawitan
             </p>
             <h1 class="admin-welcome-heading">
@@ -36,11 +36,11 @@
             <span class="admin-stat-pill-label">Total Complaints</span>
         </div>
         <div class="admin-stat-pill">
-            <span class="admin-stat-pill-num" style="color:#F59E0B;">{{ pending_count }}</span>
+            <span class="admin-stat-pill-num admin-stat-pill-num--pending">{{ pending_count }}</span>
             <span class="admin-stat-pill-label">Pending</span>
         </div>
         <div class="admin-stat-pill">
-            <span class="admin-stat-pill-num" style="color:#16A34A;">{{ resolved_count }}</span>
+            <span class="admin-stat-pill-num admin-stat-pill-num--resolved">{{ resolved_count }}</span>
             <span class="admin-stat-pill-label">Resolved</span>
         </div>
     </div>
@@ -50,32 +50,32 @@
 {# ── Stats Grid ──────────────────────────────────── #}
 <div class="stats-grid admin-stats-grid mt-4">
     <div class="stat-card stat-card--inprogress">
-        <div class="stat-card-icon-wrap" style="background:#DBEAFE;">
-            <i class="bi bi-arrow-repeat" style="color:#2563EB;"></i>
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--info">
+            <i class="bi bi-arrow-repeat"></i>
         </div>
         <span>In Progress</span>
         <strong>{{ in_progress_count }}</strong>
         <p class="stat-card-desc">Currently being handled</p>
     </div>
     <div class="stat-card stat-card--danger">
-        <div class="stat-card-icon-wrap" style="background:#FEE2E2;">
-            <i class="bi bi-exclamation-triangle-fill" style="color:#DC2626;"></i>
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--danger">
+            <i class="bi bi-exclamation-triangle-fill"></i>
         </div>
         <span>Urgent Complaints</span>
         <strong>{{ urgent_count }}</strong>
         <p class="stat-card-desc">Pending over 3 days</p>
     </div>
     <div class="stat-card stat-card--emerald">
-        <div class="stat-card-icon-wrap" style="background:#ECFDF5;">
-            <i class="bi bi-people-fill" style="color:#10B981;"></i>
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-people-fill"></i>
         </div>
         <span>Registered Residents</span>
         <strong>{{ resident_count }}</strong>
         <p class="stat-card-desc">Total user accounts</p>
     </div>
     <div class="stat-card stat-card--info">
-        <div class="stat-card-icon-wrap" style="background:#EFF6FF;">
-            <i class="bi bi-person-badge-fill" style="color:#2563EB;"></i>
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--navy">
+            <i class="bi bi-person-badge-fill"></i>
         </div>
         <span>Active Staff</span>
         <strong>{{ staff_count }}</strong>
@@ -137,7 +137,7 @@
         <div class="content-card chart-card h-100">
             <div class="chart-card-header">
                 <div class="chart-card-title">
-                    <i class="bi bi-exclamation-triangle-fill me-1" style="color:#DC2626;"></i>Urgent Complaints
+                    <i class="bi bi-exclamation-triangle-fill me-1 icon-text-danger"></i>Urgent Complaints
                 </div>
                 <span class="chart-card-sub">Pending &gt; 3 days</span>
             </div>
@@ -171,8 +171,13 @@
 </div>
 
 {# ── Recent Complaints ───────────────────────────── #}
-<div class="content-card mt-3">
-    <div class="section-title">Recent Complaints</div>
+<div class="content-card entity-card mt-3">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Recent Complaints</p>
+            <p class="entity-card-subtitle">Latest complaint activity across the barangay.</p>
+        </div>
+    </div>
     {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
 </div>
 

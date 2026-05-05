@@ -106,6 +106,41 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
 
 .app-navbar .nav-link:hover { color: #ffffff !important; }
 
+.nav-notification-link {
+    align-items: center;
+    border-radius: 999px;
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    min-width: 34px;
+    padding: 6px !important;
+    position: relative;
+}
+
+.nav-notification-link:hover {
+    background: rgba(255,255,255,.12);
+    text-decoration: none;
+}
+
+.nav-notification-badge {
+    align-items: center;
+    background: var(--danger);
+    border: 2px solid var(--navy);
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-flex;
+    font-size: 10px;
+    font-weight: 800;
+    height: 18px;
+    justify-content: center;
+    line-height: 1;
+    min-width: 18px;
+    padding: 0 4px;
+    position: absolute;
+    right: -3px;
+    top: -2px;
+}
+
 /* ================================================
    APP SHELL LAYOUT
    ================================================ */
@@ -178,6 +213,25 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
 .sidebar-link.active i { opacity: 1; }
 .sidebar-link.active:hover { background: var(--emerald-dark); }
 
+.sidebar-link--with-badge span:not(.sidebar-badge) {
+    min-width: 0;
+}
+
+.sidebar-badge {
+    align-items: center;
+    background: var(--danger);
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 800;
+    height: 20px;
+    justify-content: center;
+    margin-left: auto;
+    min-width: 20px;
+    padding: 0 6px;
+}
+
 /* Logout button inside sidebar — same look as a sidebar-link */
 .sidebar-logout-form { margin: 0; padding: 0; }
 
@@ -242,6 +296,111 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     font-size: 15px;
     font-weight: 700;
     margin-bottom: 14px;
+}
+
+.staff-functions-cell {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.55;
+    min-width: 260px;
+}
+
+.staff-function-list {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.section-kicker {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+}
+
+.entity-card {
+    overflow: hidden;
+    padding: 0;
+}
+
+.entity-card-header {
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 16px 20px;
+}
+
+.entity-card-title {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.entity-card-subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 2px 0 0;
+}
+
+.entity-table td:first-child {
+    font-weight: 600;
+}
+
+.entity-table-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.entity-empty {
+    color: var(--muted);
+    padding: 34px 18px;
+    text-align: center;
+}
+
+.entity-empty-icon {
+    color: #D1D5DB;
+    display: block;
+    font-size: 30px;
+    margin-bottom: 10px;
+}
+
+.entity-empty-title {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.entity-empty-subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 3px 0 0;
+}
+
+.entity-description {
+    color: var(--text);
+    font-size: 15px;
+}
+
+.entity-muted {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.entity-note {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.hidden-form-control {
+    display: none;
 }
 
 /* ================================================
@@ -313,6 +472,18 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     justify-content: center;
     margin-bottom: 12px;
     width: 40px;
+}
+
+.stat-card-icon-wrap--info { background: #DBEAFE; color: var(--info); }
+.stat-card-icon-wrap--danger { background: #FEE2E2; color: var(--danger); }
+.stat-card-icon-wrap--emerald { background: #ECFDF5; color: var(--emerald); }
+.stat-card-icon-wrap--navy { background: #EFF6FF; color: var(--navy); }
+
+.admin-stat-pill-num--pending { color: var(--warning); }
+.admin-stat-pill-num--resolved { color: var(--success); }
+.admin-welcome-dot {
+    font-size: 7px;
+    vertical-align: middle;
 }
 
 /* Short description line under the number */
@@ -553,6 +724,9 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     background: #FEE2E2;
     color: #991B1B;
 }
+
+.icon-text-primary { color: var(--navy); }
+.icon-text-danger { color: var(--danger); }
 
 /* ================================================
    ALERTS / FLASH MESSAGES
@@ -1189,6 +1363,10 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     justify-content: center;
     min-width: 20px;
     padding: 0 5px;
+}
+
+.notifications-page-card {
+    max-width: 880px;
 }
 
 /* Individual notification row */
@@ -2164,6 +2342,7 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     .page-header h1 { font-size: 21px; }
     .stat-card strong { font-size: 28px; }
     .content-card { padding: 16px; }
+    .entity-card { padding: 0; }
     .auth-panel { padding: 24px 18px; }
     .delete-confirm-card { padding: 24px 20px; }
 

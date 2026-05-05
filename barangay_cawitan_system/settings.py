@@ -4,7 +4,7 @@ from django.contrib.messages import constants as messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config("SECRET_KEY", default="dev-only-secret-key")
+SECRET_KEY = config("SECRET_KEY", default="dev-only-secret-key") or "dev-only-secret-key"
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -43,6 +43,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "complaints.context_processors.resident_notifications",
             ],
         },
     },

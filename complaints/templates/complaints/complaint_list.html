@@ -30,7 +30,13 @@
         </div>
     </form>
 </div>
-<div class="content-card">
+<div class="content-card entity-card">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Complaint Records</p>
+            <p class="entity-card-subtitle">Showing complaint entries for the selected status.</p>
+        </div>
+    </div>
     {% include "complaints/_complaint_table.html" %}
 </div>
 {% endblock %}

@@ -1,0 +1,38 @@
+<div class="notif-item {% if not item.is_read %}notif-item--unread{% endif %}">
+    {% if item.complaint %}
+        {% with s=item.complaint.status %}
+        <div class="notif-icon
+            {% if s == 'RESOLVED' %}notif-icon--success
+            {% elif s == 'IN_PROGRESS' %}notif-icon--info
+            {% elif s == 'UNDER_REVIEW' %}notif-icon--purple
+            {% elif s == 'REJECTED' %}notif-icon--danger
+            {% elif s == 'PENDING' %}notif-icon--warning
+            {% else %}notif-icon--navy{% endif %}">
+            <i class="bi
+                {% if s == 'RESOLVED' %}bi-check-circle-fill
+                {% elif s == 'IN_PROGRESS' %}bi-arrow-repeat
+                {% elif s == 'UNDER_REVIEW' %}bi-search
+                {% elif s == 'REJECTED' %}bi-x-circle-fill
+                {% elif s == 'PENDING' %}bi-hourglass-split
+                {% else %}bi-bell-fill{% endif %}"></i>
+        </div>
+        {% endwith %}
+    {% else %}
+        <div class="notif-icon notif-icon--navy"><i class="bi bi-bell-fill"></i></div>
+    {% endif %}
+    <div class="notif-body">
+        <p class="notif-message">{{ item.message }}</p>
+        <div class="notif-meta">
+            {% if item.complaint %}
+                <span class="notif-ref">CMP-{{ item.complaint.id|stringformat:"03d" }}</span>
+            {% endif %}
+            <span class="notif-time">{{ item.created_at|timesince }} ago</span>
+            {% if item.complaint %}
+                <a class="notif-view-link" href="{% url 'complaints:detail' item.complaint.pk %}">
+                    View <i class="bi bi-arrow-right-short"></i>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% if not item.is_read %}<span class="notif-unread-dot"></span>{% endif %}
+</div>

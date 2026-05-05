@@ -35,9 +35,23 @@ class ResidentProfile(models.Model):
 
 
 class StaffProfile(models.Model):
+    DEFAULT_RESPONSIBILITIES = "\n".join(
+        [
+            "Receive and review complaints",
+            "Categorize complaints by type and urgency",
+            "Assign or forward complaints to the correct handler",
+            "Update complaint status and internal notes",
+            "Communicate updates to complainants",
+            "Upload evidence, inspection notes, or resolution proof",
+            "Monitor overdue and urgent complaints",
+            "Prepare complaint summaries and reports",
+        ]
+    )
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="staff_profile")
     position = models.CharField(max_length=100, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
+    responsibilities = models.TextField(default=DEFAULT_RESPONSIBILITIES, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
