@@ -33,4 +33,19 @@ admin.site.register(ComplaintCategory)
 admin.site.register(ComplaintResponse)
 admin.site.register(ComplaintStatusHistory)
 admin.site.register(UploadedEvidence)
-admin.site.register(Notification)
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "notification_type",
+        "complaint",
+        "is_read",
+        "email_status",
+        "sms_status",
+        "created_at",
+    )
+    list_filter = ("notification_type", "is_read", "email_status", "sms_status", "created_at")
+    search_fields = ("user__username", "user__email", "message", "complaint__title")
+    readonly_fields = ("created_at", "read_at", "email_sent_at", "sms_sent_at")

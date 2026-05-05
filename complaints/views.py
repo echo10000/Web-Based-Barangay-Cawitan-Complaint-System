@@ -5,9 +5,9 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from accounts.models import User
 from .forms import ComplaintForm, ComplaintUpdateForm
 from .models import Complaint, ComplaintResponse, ComplaintStatusHistory, Notification, UploadedEvidence
+from .services import choose_auto_assignee, create_notification, get_staff_assignment_options
 
 
 ACTIVE_ASSIGNMENT_STATUSES = [
@@ -35,63 +35,6 @@ def admin_required(view_func):
         return redirect("dashboard:home")
 
     return wrapper
-
-
-def get_staff_assignment_options(complaint):
-    staff_members = (
-        User.objects.filter(role=User.Role.STAFF, is_active=True)
-        .select_related("staff_profile")
-        .prefetch_related("staff_profile__specialization_categories")
-        .annotate(
-            active_workload=Count(
-                "assigned_complaints",
-                filter=Q(assigned_complaints__status__in=ACTIVE_ASSIGNMENT_STATUSES),
-            ),
-            overdue_workload=Count(
-                "assigned_complaints",
-                filter=Q(
-                    assigned_complaints__status__in=ACTIVE_ASSIGNMENT_STATUSES,
-                    assigned_complaints__deadline_at__lt=timezone.now(),
-                ),
-            ),
-        )
-    )
-    options = []
-    for staff in staff_members:
-        try:
-            profile = staff.staff_profile
-            availability = profile.availability
-            availability_label = profile.get_availability_display()
-            specializations = list(profile.specialization_categories.all())
-            specialization_match = bool(complaint.category and complaint.category in specializations)
-            team = profile.department or profile.position or "No team set"
-        except Exception:
-            availability = ""
-            availability_label = "No availability set"
-            specialization_match = False
-            team = "No team set"
-
-        availability_rank = {
-            "AVAILABLE": 0,
-            "BUSY": 1,
-            "UNAVAILABLE": 2,
-        }.get(availability, 3)
-        score = availability_rank * 100 + staff.active_workload * 10 + staff.overdue_workload
-        if specialization_match:
-            score -= 20
-
-        options.append(
-            {
-                "user": staff,
-                "team": team,
-                "availability": availability_label,
-                "active_workload": staff.active_workload,
-                "overdue_workload": staff.overdue_workload,
-                "specialization_match": specialization_match,
-                "score": score,
-            }
-        )
-    return sorted(options, key=lambda item: (item["score"], item["user"].last_name, item["user"].first_name))[:8]
 
 
 @login_required
@@ -170,6 +113,10 @@ def submit_complaint_view(request):
         complaint = form.save(commit=False)
         complaint.resident = request.user
         complaint.save()
+        auto_assignee = choose_auto_assignee(complaint)
+        if auto_assignee:
+            complaint.assigned_to = auto_assignee
+            complaint.save(update_fields=["assigned_to"])
         ComplaintStatusHistory.objects.create(
             complaint=complaint,
             new_status=complaint.status,
@@ -178,11 +125,19 @@ def submit_complaint_view(request):
         )
         if form.cleaned_data.get("evidence"):
             UploadedEvidence.objects.create(complaint=complaint, file=form.cleaned_data["evidence"])
-        Notification.objects.create(
+        create_notification(
             user=request.user,
             complaint=complaint,
             message=f"Your complaint '{complaint.title}' was submitted successfully.",
+            notification_type=Notification.Type.SUBMITTED,
         )
+        if auto_assignee:
+            create_notification(
+                user=auto_assignee,
+                complaint=complaint,
+                message=f"You were automatically assigned complaint '{complaint.title}'.",
+                notification_type=Notification.Type.ASSIGNED,
+            )
         messages.success(request, "Complaint submitted successfully.")
         return redirect(complaint.get_absolute_url())
 
@@ -204,7 +159,10 @@ def complaint_detail_view(request, pk):
         messages.error(request, "You do not have permission to view this complaint.")
         return redirect("complaints:list")
     if request.user.is_resident and complaint.resident == request.user:
-        Notification.objects.filter(user=request.user, complaint=complaint, is_read=False).update(is_read=True)
+        Notification.objects.filter(user=request.user, complaint=complaint, is_read=False).update(
+            is_read=True,
+            read_at=timezone.now(),
+        )
     return render(request, "complaints/complaint_detail.html", {"complaint": complaint})
 
 
@@ -222,7 +180,7 @@ def notifications_view(request):
 @login_required
 def mark_all_notifications_read_view(request):
     if request.method == "POST":
-        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True, read_at=timezone.now())
         messages.success(request, "All notifications marked as read.")
     return redirect("complaints:notifications")
 
@@ -269,22 +227,25 @@ def update_complaint_view(request, pk):
                 changed_by=request.user,
                 remarks=remarks or "",
             )
-            Notification.objects.create(
+            create_notification(
                 user=complaint.resident,
                 complaint=complaint,
                 message=f"Your complaint '{complaint.title}' is now {complaint.get_status_display()}.",
+                notification_type=Notification.Type.STATUS_CHANGED,
             )
         elif remarks:
-            Notification.objects.create(
+            create_notification(
                 user=complaint.resident,
                 complaint=complaint,
                 message=f"New remarks were added to your complaint '{complaint.title}'.",
+                notification_type=Notification.Type.REMARKS_ADDED,
             )
         if complaint.assigned_to and complaint.assigned_to != old_assigned_to:
-            Notification.objects.create(
+            create_notification(
                 user=complaint.assigned_to,
                 complaint=complaint,
                 message=f"You were assigned complaint '{complaint.title}'.",
+                notification_type=Notification.Type.ASSIGNED,
             )
         messages.success(request, "Complaint updated successfully.")
         return redirect(complaint.get_absolute_url())

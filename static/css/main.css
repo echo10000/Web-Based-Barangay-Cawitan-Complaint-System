@@ -933,6 +933,108 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     color: #4B5563;
 }
 
+.assignment-advisor {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.assignment-advisor-header {
+    align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.assignment-advisor-title {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.assignment-advisor-subtitle {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 2px 0 0;
+}
+
+.assignment-advisor-list {
+    display: grid;
+    gap: 8px;
+}
+
+.assignment-advisor-item {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 10px 12px;
+}
+
+.assignment-advisor-meta,
+.assignment-advisor-counts {
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 12px;
+    gap: 5px;
+}
+
+.assignment-advisor-counts {
+    justify-content: flex-end;
+    min-width: 130px;
+}
+
+.assignment-match {
+    color: var(--success);
+    font-weight: 800;
+}
+
+.staff-work-card .table-responsive {
+    max-height: 420px;
+}
+
+.notif-delivery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.delivery-chip {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+}
+
+.delivery-chip--sent {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.delivery-chip--failed {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.delivery-chip--pending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.delivery-chip--skipped,
+.delivery-chip--not_configured {
+    background: #F3F4F6;
+    color: #4B5563;
+}
+
 .icon-text-primary { color: var(--navy); }
 .icon-text-danger { color: var(--danger); }
 

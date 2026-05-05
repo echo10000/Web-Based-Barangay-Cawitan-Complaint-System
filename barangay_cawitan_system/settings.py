@@ -96,6 +96,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER", default="")
+SMS_WEBHOOK_URL = config("SMS_WEBHOOK_URL", default="")
 
 MESSAGE_TAGS = {
     messages.ERROR: "danger",

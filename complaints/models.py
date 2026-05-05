@@ -144,10 +144,34 @@ class ComplaintResponse(models.Model):
 
 
 class Notification(models.Model):
+    class Type(models.TextChoices):
+        GENERAL = "GENERAL", "General"
+        SUBMITTED = "SUBMITTED", "Complaint Submitted"
+        ASSIGNED = "ASSIGNED", "Complaint Assigned"
+        STATUS_CHANGED = "STATUS_CHANGED", "Status Changed"
+        REMARKS_ADDED = "REMARKS_ADDED", "Remarks Added"
+        OVERDUE = "OVERDUE", "Overdue"
+
+    class DeliveryStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SENT = "SENT", "Sent"
+        FAILED = "FAILED", "Failed"
+        SKIPPED = "SKIPPED", "Skipped"
+        NOT_CONFIGURED = "NOT_CONFIGURED", "Not Configured"
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, null=True, blank=True)
+    notification_type = models.CharField(max_length=30, choices=Type.choices, default=Type.GENERAL)
     message = models.CharField(max_length=255)
+    link_target = models.CharField(max_length=255, blank=True)
     is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    email_status = models.CharField(max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.PENDING)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    email_error = models.TextField(blank=True)
+    sms_status = models.CharField(max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.PENDING)
+    sms_sent_at = models.DateTimeField(null=True, blank=True)
+    sms_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

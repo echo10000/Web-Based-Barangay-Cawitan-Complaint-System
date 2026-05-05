@@ -22,7 +22,7 @@
         <div class="stat-card-icon-wrap stat-card-icon-wrap--navy">
             <i class="bi bi-clipboard2-data-fill"></i>
         </div>
-        <span>Assigned</span>
+        <span>Assigned to Me</span>
         <strong>{{ assigned_count }}</strong>
         <p class="stat-card-desc">Complaints assigned to you</p>
     </div>
@@ -30,17 +30,17 @@
         <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
             <i class="bi bi-search"></i>
         </div>
-        <span>Needs Review</span>
-        <strong>{{ needs_review_count }}</strong>
-        <p class="stat-card-desc">Pending or under review</p>
+        <span>Unassigned</span>
+        <strong>{{ unassigned_count }}</strong>
+        <p class="stat-card-desc">Open complaints needing owner</p>
     </div>
     <div class="stat-card stat-card--inprogress">
         <div class="stat-card-icon-wrap stat-card-icon-wrap--info">
             <i class="bi bi-arrow-repeat"></i>
         </div>
-        <span>In Progress</span>
-        <strong>{{ in_progress_count }}</strong>
-        <p class="stat-card-desc">Currently being handled</p>
+        <span>Overdue</span>
+        <strong>{{ overdue_count }}</strong>
+        <p class="stat-card-desc">Past SLA deadline</p>
     </div>
     <div class="stat-card stat-card--resolved">
         <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
@@ -53,85 +53,59 @@
 </div>
 
 <div class="row mt-3 g-3">
-    <div class="col-lg-8">
-        <div class="content-card entity-card h-100">
+    <div class="col-xl-6">
+        <div class="content-card entity-card h-100 staff-work-card">
             <div class="entity-card-header">
                 <div>
-                    <p class="entity-card-title">Assigned Complaints</p>
-                    <p class="entity-card-subtitle">Open each record to verify details, categorize, and post updates.</p>
+                    <p class="entity-card-title">
+                        <i class="bi bi-inbox-fill me-1"></i>Unassigned
+                    </p>
+                    <p class="entity-card-subtitle">Open complaints that staff can pick up or admins can assign.</p>
                 </div>
             </div>
-            {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+            {% include "complaints/_complaint_table.html" with complaints=unassigned_complaints %}
         </div>
     </div>
 
-    <div class="col-lg-4 d-flex flex-column gap-3">
-        <div class="content-card entity-card">
+    <div class="col-xl-6">
+        <div class="content-card entity-card h-100 staff-work-card">
             <div class="entity-card-header">
                 <div>
                     <p class="entity-card-title">
-                        <i class="bi bi-kanban-fill me-1"></i>Status Breakdown
+                        <i class="bi bi-person-check-fill me-1"></i>Assigned to Me
                     </p>
-                    <p class="entity-card-subtitle">Your current workload</p>
+                    <p class="entity-card-subtitle">Your current complaint workload.</p>
                 </div>
             </div>
-            <div class="p-3">
-                <div class="report-row">
-                    {% include "complaints/_status_badge.html" with status="PENDING" %}
-                    <strong>{{ pending_count }}</strong>
-                </div>
-                <div class="report-row">
-                    {% include "complaints/_status_badge.html" with status="UNDER_REVIEW" %}
-                    <strong>{{ under_review_count }}</strong>
-                </div>
-                <div class="report-row">
-                    {% include "complaints/_status_badge.html" with status="IN_PROGRESS" %}
-                    <strong>{{ in_progress_count }}</strong>
-                </div>
-                <div class="report-row">
-                    {% include "complaints/_status_badge.html" with status="RESOLVED" %}
-                    <strong>{{ resolved_count }}</strong>
-                </div>
-            </div>
+            {% include "complaints/_complaint_table.html" with complaints=assigned_to_me_complaints %}
         </div>
+    </div>
 
-        <div class="content-card entity-card">
+    <div class="col-xl-6">
+        <div class="content-card entity-card h-100 staff-work-card">
             <div class="entity-card-header">
                 <div>
                     <p class="entity-card-title">
-                        <i class="bi bi-exclamation-triangle-fill me-1 icon-text-danger"></i>Needs Attention
+                        <i class="bi bi-exclamation-triangle-fill me-1 icon-text-danger"></i>Overdue
                     </p>
-                    <p class="entity-card-subtitle">Urgent priority or past SLA deadline</p>
+                    <p class="entity-card-subtitle">Assigned complaints already past their SLA deadline.</p>
                 </div>
             </div>
-            <div class="p-3">
-                {% if urgent_assigned %}
-                    <ul class="urgent-list">
-                        {% for complaint in urgent_assigned %}
-                            <li class="urgent-list-item">
-                                <div class="urgent-list-dot"></div>
-                                <div class="urgent-list-body">
-                                    <a class="urgent-list-title" href="{% url 'complaints:detail' complaint.pk %}">
-                                        {{ complaint.title }}
-                                    </a>
-                                    <div class="urgent-list-meta">
-                                        {% include "complaints/_priority_badge.html" with priority=complaint.priority %}
-                                        <span>&middot;</span>
-                                        <span>{{ complaint.category.name|default:"Uncategorized" }}</span>
-                                        <span>&middot;</span>
-                                        <span>Due {{ complaint.deadline_at|date:"M d, Y h:i A" }}</span>
-                                    </div>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <div class="urgent-empty">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <p>No overdue assigned complaints.</p>
-                    </div>
-                {% endif %}
+            {% include "complaints/_complaint_table.html" with complaints=overdue_complaints %}
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="content-card entity-card h-100 staff-work-card">
+            <div class="entity-card-header">
+                <div>
+                    <p class="entity-card-title">
+                        <i class="bi bi-clock-history me-1"></i>Recently Updated
+                    </p>
+                    <p class="entity-card-subtitle">Latest changes on complaints assigned to you.</p>
+                </div>
             </div>
+            {% include "complaints/_complaint_table.html" with complaints=recently_updated_complaints %}
         </div>
     </div>
 </div>

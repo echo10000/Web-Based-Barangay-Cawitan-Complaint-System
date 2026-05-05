@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from accounts.models import StaffProfile, User
 from complaints.models import Complaint, Notification
+from complaints.services import create_notification
 
 
 ACTIVE_URGENT_STATUSES = [
@@ -23,6 +24,20 @@ URGENT_PRIORITY_ORDER = Case(
     default=1,
     output_field=IntegerField(),
 )
+
+
+def notify_admins_about_overdue_complaints(overdue_complaints):
+    admins = User.objects.filter(Q(role=User.Role.ADMIN) | Q(is_superuser=True)).distinct()
+    for complaint in overdue_complaints:
+        message = f"Complaint '{complaint.title}' is overdue for SLA response."
+        for admin in admins:
+            create_notification(
+                user=admin,
+                complaint=complaint,
+                message=message,
+                notification_type=Notification.Type.OVERDUE,
+                dedupe=True,
+            )
 
 
 def home_view(request):
@@ -181,6 +196,11 @@ def admin_dashboard_view(request):
         .annotate(urgent_priority_order=URGENT_PRIORITY_ORDER)
         .order_by("urgent_priority_order", "created_at")[:6]
     )
+    overdue_complaints = Complaint.objects.filter(
+        deadline_at__lt=now,
+        status__in=ACTIVE_URGENT_STATUSES,
+    ).only("id", "title")
+    notify_admins_about_overdue_complaints(overdue_complaints)
 
     return render(
         request,
