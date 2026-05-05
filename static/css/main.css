@@ -492,7 +492,7 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     align-items: end;
     display: grid;
     gap: 14px;
-    grid-template-columns: minmax(280px, 1.2fr) minmax(220px, 320px) auto auto;
+    grid-template-columns: minmax(260px, 1.2fr) minmax(180px, 240px) minmax(180px, 240px) auto auto;
 }
 
 .complaint-filter-main {
@@ -878,6 +878,59 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
 .status-badge--rejected {
     background: #FEE2E2;
     color: #991B1B;
+}
+
+.priority-badge {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+.priority-badge--low {
+    background: #F3F4F6;
+    color: #4B5563;
+}
+
+.priority-badge--normal {
+    background: #E0F2FE;
+    color: #0369A1;
+}
+
+.priority-badge--high {
+    background: #FFEDD5;
+    color: #C2410C;
+}
+
+.priority-badge--urgent {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+
+.sla-badge {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+.sla-badge--on-track {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.sla-badge--overdue {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+
+.sla-badge--closed {
+    background: #F3F4F6;
+    color: #4B5563;
 }
 
 .icon-text-primary { color: var(--navy); }
@@ -2930,7 +2983,7 @@ button,
     align-items: end !important;
     display: grid !important;
     gap: 16px !important;
-    grid-template-columns: minmax(360px, 1fr) minmax(220px, 280px) auto auto !important;
+    grid-template-columns: minmax(300px, 1fr) minmax(180px, 240px) minmax(180px, 240px) auto auto !important;
 }
 
 .complaint-search-field,

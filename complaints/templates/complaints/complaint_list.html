@@ -73,16 +73,25 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="complaint-filter-main">
+            <label class="form-label" for="complaint-priority-filter">Filter by priority</label>
+            <select id="complaint-priority-filter" name="priority" class="form-select">
+                <option value="">All priorities</option>
+                {% for value, label in priority_choices %}
+                    <option value="{{ value }}" {% if selected_priority == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <div class="complaint-filter-actions">
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-funnel-fill me-1"></i>Apply
             </button>
-            {% if selected_status or search_query %}
+            {% if selected_status or selected_priority or search_query %}
                 <a class="btn btn-outline-secondary" href="{% url 'complaints:list' %}">Clear</a>
             {% endif %}
         </div>
         <div class="complaint-filter-meta">
-            <span>{{ selected_status_label }}</span>
+            <span>{{ selected_status_label }} &middot; {{ selected_priority_label }}</span>
             <strong>{{ filtered_count }}</strong>
         </div>
     </form>
@@ -93,7 +102,7 @@
         <div>
             <p class="entity-card-title">Complaint Records</p>
             <p class="entity-card-subtitle">
-                Showing {{ filtered_count }} complaint{{ filtered_count|pluralize }}{% if selected_status %} marked {{ selected_status_label }}{% endif %}{% if search_query %} matching "{{ search_query }}"{% endif %}.
+                Showing {{ filtered_count }} complaint{{ filtered_count|pluralize }}{% if selected_status %} marked {{ selected_status_label }}{% endif %}{% if selected_priority %} with {{ selected_priority_label }} priority{% endif %}{% if search_query %} matching "{{ search_query }}"{% endif %}.
             </p>
         </div>
     </div>

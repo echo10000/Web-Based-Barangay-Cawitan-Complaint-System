@@ -6,6 +6,40 @@
     <p>{{ complaint.title }}</p>
 </div>
 <div class="content-card form-card">
+    {% if staff_assignment_options %}
+        <div class="assignment-advisor mb-4">
+            <div class="assignment-advisor-header">
+                <div>
+                    <p class="assignment-advisor-title">
+                        <i class="bi bi-person-check-fill me-1"></i>Assignment Advisor
+                    </p>
+                    <p class="assignment-advisor-subtitle">Ranked by availability, active workload, overdue work, and category specialization.</p>
+                </div>
+            </div>
+            <div class="assignment-advisor-list">
+                {% for option in staff_assignment_options %}
+                    <div class="assignment-advisor-item">
+                        <div>
+                            <strong>{{ option.user.get_full_name|default:option.user.username }}</strong>
+                            <div class="assignment-advisor-meta">
+                                <span>{{ option.availability }}</span>
+                                <span>&middot;</span>
+                                <span>{{ option.team }}</span>
+                                {% if option.specialization_match %}
+                                    <span>&middot;</span>
+                                    <span class="assignment-match">Category match</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="assignment-advisor-counts">
+                            <span>{{ option.active_workload }} active</span>
+                            <span>{{ option.overdue_workload }} overdue</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
     <form method="post" novalidate>
         {% csrf_token %}
         {% for field in form %}

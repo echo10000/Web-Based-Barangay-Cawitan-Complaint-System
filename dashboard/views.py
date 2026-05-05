@@ -3,13 +3,26 @@ from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, When
 from django.db.models.expressions import RawSQL
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from accounts.models import StaffProfile, User
 from complaints.models import Complaint, Notification
+
+
+ACTIVE_URGENT_STATUSES = [
+    Complaint.Status.PENDING,
+    Complaint.Status.UNDER_REVIEW,
+    Complaint.Status.IN_PROGRESS,
+]
+
+URGENT_PRIORITY_ORDER = Case(
+    When(priority=Complaint.Priority.URGENT, then=0),
+    default=1,
+    output_field=IntegerField(),
+)
 
 
 def home_view(request):
@@ -60,29 +73,41 @@ def staff_dashboard_view(request):
         messages.error(request, "Staff only.")
         return redirect("dashboard:home")
     StaffProfile.objects.get_or_create(user=request.user)
+    active_statuses = ACTIVE_URGENT_STATUSES
     complaints = Complaint.objects.filter(
         Q(assigned_to=request.user) | Q(assigned_to__isnull=True)
     ).select_related("resident", "assigned_to", "category")
+    assigned_to_me = complaints.filter(assigned_to=request.user)
+    unassigned_complaints = complaints.filter(assigned_to__isnull=True, status__in=active_statuses).order_by("deadline_at", "created_at")
+    overdue_complaints = assigned_to_me.filter(status__in=active_statuses, deadline_at__lt=timezone.now()).order_by("deadline_at")
+    recently_updated = assigned_to_me.order_by("-updated_at")
     pending_count = complaints.filter(status=Complaint.Status.PENDING).count()
     under_review_count = complaints.filter(status=Complaint.Status.UNDER_REVIEW).count()
     in_progress_count = complaints.filter(status=Complaint.Status.IN_PROGRESS).count()
     resolved_count = complaints.filter(status=Complaint.Status.RESOLVED).count()
+    urgent_filter = Q(priority=Complaint.Priority.URGENT) | Q(deadline_at__lt=timezone.now())
     urgent_assigned = complaints.filter(
-        status__in=[Complaint.Status.PENDING, Complaint.Status.UNDER_REVIEW],
-        created_at__lt=timezone.now() - timedelta(days=3),
-    )[:5]
+        urgent_filter,
+        status__in=ACTIVE_URGENT_STATUSES,
+    ).annotate(urgent_priority_order=URGENT_PRIORITY_ORDER).order_by("urgent_priority_order", "created_at")[:5]
     return render(
         request,
         "dashboard/staff_dashboard.html",
         {
-            "assigned_count": complaints.count(),
+            "assigned_count": assigned_to_me.count(),
+            "unassigned_count": unassigned_complaints.count(),
+            "overdue_count": overdue_complaints.count(),
             "needs_review_count": pending_count + under_review_count,
             "pending_count": pending_count,
             "under_review_count": under_review_count,
             "in_progress_count": in_progress_count,
             "resolved_count": resolved_count,
             "urgent_assigned": urgent_assigned,
-            "recent_complaints": complaints[:8],
+            "unassigned_complaints": unassigned_complaints[:5],
+            "assigned_to_me_complaints": assigned_to_me[:6],
+            "overdue_complaints": overdue_complaints[:5],
+            "recently_updated_complaints": recently_updated[:5],
+            "recent_complaints": assigned_to_me[:8],
         },
     )
 
@@ -93,7 +118,6 @@ def admin_dashboard_view(request):
         messages.error(request, "Admins only.")
         return redirect("dashboard:home")
     now              = timezone.now()
-    urgent_threshold = now - timedelta(days=3)
 
     # ── Counts ────────────────────────────────────────
     pending_count     = Complaint.objects.filter(status=Complaint.Status.PENDING).count()
@@ -101,9 +125,10 @@ def admin_dashboard_view(request):
     in_progress_count = Complaint.objects.filter(status=Complaint.Status.IN_PROGRESS).count()
     resolved_count    = Complaint.objects.filter(status=Complaint.Status.RESOLVED).count()
     rejected_count    = Complaint.objects.filter(status=Complaint.Status.REJECTED).count()
+    urgent_filter     = Q(priority=Complaint.Priority.URGENT) | Q(deadline_at__lt=now)
     urgent_count      = Complaint.objects.filter(
-                            status=Complaint.Status.PENDING,
-                            created_at__lt=urgent_threshold,
+                            urgent_filter,
+                            status__in=ACTIVE_URGENT_STATUSES,
                         ).count()
 
     # ── Chart 1 — Complaints by Status ────────────────
@@ -151,9 +176,10 @@ def admin_dashboard_view(request):
     # ── Chart 4 — Urgent Complaints list ──────────────
     urgent_complaints = (
         Complaint.objects
-        .filter(status=Complaint.Status.PENDING, created_at__lt=urgent_threshold)
+        .filter(urgent_filter, status__in=ACTIVE_URGENT_STATUSES)
         .select_related("resident", "category")
-        .order_by("created_at")[:6]
+        .annotate(urgent_priority_order=URGENT_PRIORITY_ORDER)
+        .order_by("urgent_priority_order", "created_at")[:6]
     )
 
     return render(

@@ -63,7 +63,7 @@
         </div>
         <span>Urgent Complaints</span>
         <strong>{{ urgent_count }}</strong>
-        <p class="stat-card-desc">Pending over 3 days</p>
+        <p class="stat-card-desc">Urgent priority or past SLA</p>
     </div>
     <div class="stat-card stat-card--emerald">
         <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
@@ -139,7 +139,7 @@
                 <div class="chart-card-title">
                     <i class="bi bi-exclamation-triangle-fill me-1 icon-text-danger"></i>Urgent Complaints
                 </div>
-                <span class="chart-card-sub">Pending &gt; 3 days</span>
+                <span class="chart-card-sub">Urgent priority or past SLA deadline</span>
             </div>
             {% if urgent_complaints %}
                 <ul class="urgent-list">
@@ -151,9 +151,11 @@
                                     {{ c.title }}
                                 </a>
                                 <div class="urgent-list-meta">
+                                    {% include "complaints/_priority_badge.html" with priority=c.priority %}
+                                    <span>&middot;</span>
                                     <span>{{ c.category.name|default:"Uncategorized" }}</span>
                                     <span>&middot;</span>
-                                    <span>{{ c.created_at|timesince }} ago</span>
+                                    <span>Due {{ c.deadline_at|date:"M d, Y h:i A" }}</span>
                                 </div>
                             </div>
                         </li>

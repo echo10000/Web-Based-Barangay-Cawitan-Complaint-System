@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 
 class ComplaintCategory(models.Model):
@@ -17,12 +20,25 @@ class ComplaintCategory(models.Model):
 
 
 class Complaint(models.Model):
+    SLA_HOURS = {
+        "LOW": 168,
+        "NORMAL": 72,
+        "HIGH": 48,
+        "URGENT": 24,
+    }
+
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         UNDER_REVIEW = "UNDER_REVIEW", "Under Review"
         IN_PROGRESS = "IN_PROGRESS", "In Progress"
         RESOLVED = "RESOLVED", "Resolved"
         REJECTED = "REJECTED", "Rejected"
+
+    class Priority(models.TextChoices):
+        LOW = "LOW", "Low"
+        NORMAL = "NORMAL", "Normal"
+        HIGH = "HIGH", "High"
+        URGENT = "URGENT", "Urgent"
 
     resident = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="complaints")
     assigned_to = models.ForeignKey(
@@ -38,7 +54,10 @@ class Complaint(models.Model):
     contact_number = models.CharField(max_length=20, blank=True, verbose_name="Contact Number")
     incident_location = models.CharField(max_length=255)
     incident_date = models.DateField(null=True, blank=True)
+    priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.NORMAL)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    deadline_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -50,6 +69,55 @@ class Complaint(models.Model):
 
     def get_absolute_url(self):
         return reverse("complaints:detail", kwargs={"pk": self.pk})
+
+    def save(self, *args, **kwargs):
+        if not self.deadline_at:
+            self.set_deadline()
+        super().save(*args, **kwargs)
+
+    def get_sla_hours(self):
+        return self.SLA_HOURS.get(self.priority, self.SLA_HOURS[self.Priority.NORMAL])
+
+    def set_deadline(self, reference_time=None):
+        reference_time = reference_time or self.created_at or timezone.now()
+        self.deadline_at = reference_time + timedelta(hours=self.get_sla_hours())
+
+    @property
+    def is_priority_urgent(self):
+        return self.priority == self.Priority.URGENT
+
+    @property
+    def is_closed(self):
+        return self.status in [self.Status.RESOLVED, self.Status.REJECTED]
+
+    @property
+    def is_overdue(self):
+        return bool(self.deadline_at and not self.is_closed and self.deadline_at < timezone.now())
+
+    @property
+    def sla_label(self):
+        if self.is_closed:
+            return "Closed"
+        if self.is_overdue:
+            return "Overdue"
+        return "On track"
+
+
+class ComplaintStatusHistory(models.Model):
+    complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, related_name="status_history")
+    old_status = models.CharField(max_length=20, choices=Complaint.Status.choices, blank=True)
+    new_status = models.CharField(max_length=20, choices=Complaint.Status.choices)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    remarks = models.TextField(blank=True)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-changed_at"]
+        verbose_name_plural = "Complaint status history"
+
+    def __str__(self):
+        old_status = self.old_status or "New"
+        return f"{self.complaint.title}: {old_status} to {self.new_status}"
 
 
 class UploadedEvidence(models.Model):

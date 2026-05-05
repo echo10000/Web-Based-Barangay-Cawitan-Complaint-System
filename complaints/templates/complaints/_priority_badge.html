@@ -1,0 +1,9 @@
+{% if priority == 'LOW' %}
+    <span class="priority-badge priority-badge--low">Low</span>
+{% elif priority == 'HIGH' %}
+    <span class="priority-badge priority-badge--high">High</span>
+{% elif priority == 'URGENT' %}
+    <span class="priority-badge priority-badge--urgent">Urgent</span>
+{% else %}
+    <span class="priority-badge priority-badge--normal">Normal</span>
+{% endif %}

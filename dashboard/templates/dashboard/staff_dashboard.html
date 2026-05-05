@@ -101,7 +101,7 @@
                     <p class="entity-card-title">
                         <i class="bi bi-exclamation-triangle-fill me-1 icon-text-danger"></i>Needs Attention
                     </p>
-                    <p class="entity-card-subtitle">Assigned cases waiting over 3 days</p>
+                    <p class="entity-card-subtitle">Urgent priority or past SLA deadline</p>
                 </div>
             </div>
             <div class="p-3">
@@ -115,9 +115,11 @@
                                         {{ complaint.title }}
                                     </a>
                                     <div class="urgent-list-meta">
+                                        {% include "complaints/_priority_badge.html" with priority=complaint.priority %}
+                                        <span>&middot;</span>
                                         <span>{{ complaint.category.name|default:"Uncategorized" }}</span>
                                         <span>&middot;</span>
-                                        <span>{{ complaint.created_at|timesince }} ago</span>
+                                        <span>Due {{ complaint.deadline_at|date:"M d, Y h:i A" }}</span>
                                     </div>
                                 </div>
                             </li>

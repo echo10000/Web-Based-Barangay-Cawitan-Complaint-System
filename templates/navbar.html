@@ -26,16 +26,14 @@
             {% endif %}
             <ul class="navbar-nav {% if user.is_authenticated %}ms-auto{% endif %} align-items-lg-center gap-2">
                 {% if user.is_authenticated %}
-                    {% if user.is_resident %}
                     <li class="nav-item">
                         <a class="nav-link nav-notification-link" href="{% url 'complaints:notifications' %}" aria-label="Notifications">
                             <i class="bi bi-bell-fill"></i>
-                            {% if resident_unread_notifications_count %}
-                                <span class="nav-notification-badge">{{ resident_unread_notifications_count }}</span>
+                            {% if unread_notifications_count %}
+                                <span class="nav-notification-badge">{{ unread_notifications_count }}</span>
                             {% endif %}
                         </a>
                     </li>
-                    {% endif %}
                     <li class="nav-item">
                         <span class="navbar-username px-2">
                             <i class="bi bi-person-circle me-1"></i>{{ user.get_full_name|default:user.username }}

@@ -4,7 +4,7 @@
 <div class="page-header page-header-row">
     <div>
         <h1>Notifications</h1>
-        <p>Review updates about your submitted complaints.</p>
+        <p>Review complaint updates, assignments, and staff remarks.</p>
     </div>
     {% if unread_count %}
         <form method="post" action="{% url 'complaints:mark_all_notifications_read' %}">
@@ -32,7 +32,7 @@
         <div class="notif-empty">
             <i class="bi bi-bell-slash notif-empty-icon"></i>
             <p class="notif-empty-text">No notifications yet.</p>
-            <p class="notif-empty-sub">Updates will appear here when your complaint status changes.</p>
+            <p class="notif-empty-sub">Updates will appear here when complaint activity needs your attention.</p>
         </div>
     {% endfor %}
 </div>

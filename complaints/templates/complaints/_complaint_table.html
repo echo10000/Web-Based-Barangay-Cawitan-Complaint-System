@@ -4,7 +4,9 @@
             <tr>
                 <th>Title</th>
                 <th>Category</th>
+                <th>Priority</th>
                 <th>Status</th>
+                <th>Deadline</th>
                 <th>Resident</th>
                 <th>Assigned Staff</th>
                 <th>Date</th>
@@ -23,7 +25,18 @@
                     <td>
                         <span class="complaint-category-chip">{{ complaint.category.name|default:"Uncategorized" }}</span>
                     </td>
+                    <td>{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</td>
                     <td>{% include "complaints/_status_badge.html" with status=complaint.status %}</td>
+                    <td>
+                        {% if complaint.deadline_at %}
+                            <span class="sla-badge {% if complaint.is_overdue %}sla-badge--overdue{% elif complaint.is_closed %}sla-badge--closed{% else %}sla-badge--on-track{% endif %}">
+                                {{ complaint.sla_label }}
+                            </span>
+                            <div class="complaint-row-meta">{{ complaint.deadline_at|date:"M d, Y h:i A" }}</div>
+                        {% else %}
+                            <span class="text-muted">Not set</span>
+                        {% endif %}
+                    </td>
                     <td>{{ complaint.resident.get_full_name|default:complaint.resident.username }}</td>
                     <td>{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
                     <td class="text-muted">{{ complaint.created_at|date:"M d, Y" }}</td>
@@ -40,7 +53,7 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="7">
+                    <td colspan="9">
                         <div class="entity-empty">
                             <i class="bi bi-inbox-fill entity-empty-icon"></i>
                             <p class="entity-empty-title">No complaints found.</p>

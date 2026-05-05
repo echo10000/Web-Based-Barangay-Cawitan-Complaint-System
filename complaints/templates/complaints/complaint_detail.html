@@ -115,6 +115,23 @@
             <dl class="row detail-list mt-3">
                 <dt class="col-sm-4">Category</dt>
                 <dd class="col-sm-8">{{ complaint.category.name|default:"Uncategorized" }}</dd>
+                <dt class="col-sm-4">Priority</dt>
+                <dd class="col-sm-8">{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</dd>
+                <dt class="col-sm-4">SLA Deadline</dt>
+                <dd class="col-sm-8">
+                    {% if complaint.deadline_at %}
+                        <span class="sla-badge {% if complaint.is_overdue %}sla-badge--overdue{% elif complaint.is_closed %}sla-badge--closed{% else %}sla-badge--on-track{% endif %}">
+                            {{ complaint.sla_label }}
+                        </span>
+                        <span class="ms-2">{{ complaint.deadline_at|date:"M d, Y h:i A" }}</span>
+                    {% else %}
+                        <span class="text-muted">Not set</span>
+                    {% endif %}
+                </dd>
+                {% if complaint.resolved_at %}
+                    <dt class="col-sm-4">Resolved Date</dt>
+                    <dd class="col-sm-8">{{ complaint.resolved_at|date:"M d, Y h:i A" }}</dd>
+                {% endif %}
                 <dt class="col-sm-4">Incident Location</dt>
                 <dd class="col-sm-8">{{ complaint.incident_location }}</dd>
                 <dt class="col-sm-4">Incident Date</dt>
@@ -146,6 +163,33 @@
             {% empty %}
                 <p class="entity-muted mb-0">
                     <i class="bi bi-chat-left me-1"></i>No responses yet.
+                </p>
+            {% endfor %}
+        </div>
+        <div class="content-card mt-4">
+            <div class="section-title"><i class="bi bi-clock-history me-1"></i>Status History</div>
+            {% for item in complaint.status_history.all %}
+                <div class="timeline-item">
+                    <strong>
+                        {% if item.old_status %}
+                            {{ item.get_old_status_display }} to {{ item.get_new_status_display }}
+                        {% else %}
+                            {{ item.get_new_status_display }}
+                        {% endif %}
+                    </strong>
+                    <small>
+                        {{ item.changed_at|date:"M d, Y h:i A" }}
+                        {% if item.changed_by %}
+                            by {{ item.changed_by.get_full_name|default:item.changed_by.username }}
+                        {% endif %}
+                    </small>
+                    {% if item.remarks %}
+                        <p>{{ item.remarks|linebreaks }}</p>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p class="entity-muted mb-0">
+                    <i class="bi bi-clock me-1"></i>No status history yet.
                 </p>
             {% endfor %}
         </div>
