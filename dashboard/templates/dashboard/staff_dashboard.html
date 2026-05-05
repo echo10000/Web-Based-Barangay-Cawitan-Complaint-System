@@ -2,46 +2,135 @@
 {% block title %}Staff Dashboard | Barangay Cawitan{% endblock %}
 {% block content %}
 
-<div class="welcome-banner welcome-banner--staff">
-    <div class="welcome-banner-body">
-        <p class="welcome-eyebrow">
-            <i class="bi bi-person-badge-fill me-1"></i>Staff Dashboard
-        </p>
-        <h2 class="welcome-heading">Welcome back, {{ user.get_full_name|default:user.username }}!</h2>
-        <p class="welcome-sub">Review assigned complaints and keep residents informed about their concerns.</p>
+<div class="page-header page-header-row">
+    <div>
+        <h1>Staff Dashboard</h1>
+        <p>Review assigned complaints, classify concerns, update progress, and keep residents informed.</p>
     </div>
-    <i class="bi bi-person-badge-fill welcome-banner-deco"></i>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="{% url 'complaints:list' %}">
+            <i class="bi bi-list-check me-1"></i>View Complaints
+        </a>
+        <a class="btn btn-outline-primary" href="{% url 'accounts:profile' %}">
+            <i class="bi bi-person-gear me-1"></i>Edit Profile
+        </a>
+    </div>
 </div>
 
-<div class="stats-grid mt-4">
+<div class="stats-grid admin-stats-grid mt-4">
     <div class="stat-card stat-card--total">
-        <span><i class="bi bi-clipboard2-data-fill me-1"></i>Assigned</span>
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--navy">
+            <i class="bi bi-clipboard2-data-fill"></i>
+        </div>
+        <span>Assigned</span>
         <strong>{{ assigned_count }}</strong>
+        <p class="stat-card-desc">Complaints assigned to you</p>
+    </div>
+    <div class="stat-card stat-card--pending">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
+            <i class="bi bi-search"></i>
+        </div>
+        <span>Needs Review</span>
+        <strong>{{ needs_review_count }}</strong>
+        <p class="stat-card-desc">Pending or under review</p>
     </div>
     <div class="stat-card stat-card--inprogress">
-        <span><i class="bi bi-arrow-repeat me-1"></i>In Progress</span>
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--info">
+            <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <span>In Progress</span>
         <strong>{{ in_progress_count }}</strong>
+        <p class="stat-card-desc">Currently being handled</p>
     </div>
     <div class="stat-card stat-card--resolved">
-        <span><i class="bi bi-check-circle-fill me-1"></i>Resolved</span>
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <span>Resolved</span>
         <strong>{{ resolved_count }}</strong>
+        <p class="stat-card-desc">Completed complaint records</p>
     </div>
 </div>
 
-<div class="content-card mt-2">
-    <div class="section-title">Staff Functions</div>
-    <div class="staff-function-list">
-        {{ user.staff_profile.responsibilities|default:"Receive, review, update, and coordinate assigned complaints."|linebreaksbr }}
-    </div>
-</div>
-
-<div class="content-card entity-card mt-2">
-    <div class="entity-card-header">
-        <div>
-            <p class="entity-card-title">Assigned Complaints</p>
-            <p class="entity-card-subtitle">Complaints currently assigned to you.</p>
+<div class="row mt-3 g-3">
+    <div class="col-lg-8">
+        <div class="content-card entity-card h-100">
+            <div class="entity-card-header">
+                <div>
+                    <p class="entity-card-title">Assigned Complaints</p>
+                    <p class="entity-card-subtitle">Open each record to verify details, categorize, and post updates.</p>
+                </div>
+            </div>
+            {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
         </div>
     </div>
-    {% include "complaints/_complaint_table.html" with complaints=recent_complaints %}
+
+    <div class="col-lg-4 d-flex flex-column gap-3">
+        <div class="content-card entity-card">
+            <div class="entity-card-header">
+                <div>
+                    <p class="entity-card-title">
+                        <i class="bi bi-kanban-fill me-1"></i>Status Breakdown
+                    </p>
+                    <p class="entity-card-subtitle">Your current workload</p>
+                </div>
+            </div>
+            <div class="p-3">
+                <div class="report-row">
+                    {% include "complaints/_status_badge.html" with status="PENDING" %}
+                    <strong>{{ pending_count }}</strong>
+                </div>
+                <div class="report-row">
+                    {% include "complaints/_status_badge.html" with status="UNDER_REVIEW" %}
+                    <strong>{{ under_review_count }}</strong>
+                </div>
+                <div class="report-row">
+                    {% include "complaints/_status_badge.html" with status="IN_PROGRESS" %}
+                    <strong>{{ in_progress_count }}</strong>
+                </div>
+                <div class="report-row">
+                    {% include "complaints/_status_badge.html" with status="RESOLVED" %}
+                    <strong>{{ resolved_count }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card entity-card">
+            <div class="entity-card-header">
+                <div>
+                    <p class="entity-card-title">
+                        <i class="bi bi-exclamation-triangle-fill me-1 icon-text-danger"></i>Needs Attention
+                    </p>
+                    <p class="entity-card-subtitle">Assigned cases waiting over 3 days</p>
+                </div>
+            </div>
+            <div class="p-3">
+                {% if urgent_assigned %}
+                    <ul class="urgent-list">
+                        {% for complaint in urgent_assigned %}
+                            <li class="urgent-list-item">
+                                <div class="urgent-list-dot"></div>
+                                <div class="urgent-list-body">
+                                    <a class="urgent-list-title" href="{% url 'complaints:detail' complaint.pk %}">
+                                        {{ complaint.title }}
+                                    </a>
+                                    <div class="urgent-list-meta">
+                                        <span>{{ complaint.category.name|default:"Uncategorized" }}</span>
+                                        <span>&middot;</span>
+                                        <span>{{ complaint.created_at|timesince }} ago</span>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="urgent-empty">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <p>No overdue assigned complaints.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

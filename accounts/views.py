@@ -1,8 +1,12 @@
+import random
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
-from django.shortcuts import redirect, render
+from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404, redirect, render
+from django.conf import settings
 
 from .forms import (
     LoginForm,
@@ -12,7 +16,28 @@ from .forms import (
     StaffProfileForm,
     UserProfileForm,
 )
-from .models import ResidentProfile, StaffProfile, User
+from .models import PasswordResetOTP, ResidentProfile, StaffProfile, User
+
+
+PASSWORD_RESET_USER_SESSION_KEY = "password_reset_user_id"
+PASSWORD_RESET_VERIFIED_SESSION_KEY = "password_reset_verified_user_id"
+
+
+def _generate_otp():
+    return f"{random.SystemRandom().randint(0, 999999):06d}"
+
+
+def _create_and_send_password_reset_otp(user):
+    PasswordResetOTP.objects.filter(user=user, is_used=False).update(is_used=True)
+    otp = _generate_otp()
+    PasswordResetOTP.objects.create(user=user, otp=otp)
+    send_mail(
+        "Barangay Cawitan - Password Reset OTP",
+        f"Your OTP is: {otp}. It expires in 10 minutes. Do not share this.",
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
 
 
 def admin_required(view_func):
@@ -28,6 +53,7 @@ def admin_required(view_func):
 class RoleAwareLoginView(LoginView):
     template_name = "accounts/login.html"
     authentication_form = LoginForm
+    extra_context = {"messages_in_card": True}
 
 
 login_view = RoleAwareLoginView.as_view()
@@ -43,6 +69,103 @@ def register_view(request):
         messages.success(request, "Registration successful. Welcome to the complaint portal.")
         return redirect("dashboard:resident")
     return render(request, "accounts/register.html", {"form": form})
+
+
+def forgot_password_view(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard:home")
+
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        user = User.objects.filter(email__iexact=email).first()
+
+        if not user:
+            messages.error(request, "No account found with that email.")
+            return redirect("accounts:forgot_password")
+
+        try:
+            _create_and_send_password_reset_otp(user)
+        except Exception:
+            messages.error(request, "Unable to send OTP right now. Please try again later.")
+            return redirect("accounts:forgot_password")
+
+        request.session[PASSWORD_RESET_USER_SESSION_KEY] = user.id
+        request.session.pop(PASSWORD_RESET_VERIFIED_SESSION_KEY, None)
+        messages.success(request, "We sent a 6-digit OTP to your email.")
+        return redirect("accounts:verify_otp")
+
+    return render(request, "accounts/forgot_password.html", {"messages_in_card": True})
+
+
+def verify_otp_view(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard:home")
+
+    user_id = request.session.get(PASSWORD_RESET_USER_SESSION_KEY)
+    if not user_id:
+        messages.error(request, "Please enter your registered email first.")
+        return redirect("accounts:forgot_password")
+
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == "GET" and request.GET.get("resend") == "1":
+        try:
+            _create_and_send_password_reset_otp(user)
+        except Exception:
+            messages.error(request, "Unable to resend OTP right now. Please try again later.")
+            return redirect("accounts:verify_otp")
+
+        messages.success(request, "A new OTP has been sent to your email.")
+        return redirect("accounts:verify_otp")
+
+    if request.method == "POST":
+        otp = request.POST.get("otp", "").strip()
+        otp_record = PasswordResetOTP.objects.filter(user=user, otp=otp, is_used=False).first()
+
+        if not otp_record:
+            messages.error(request, "Invalid OTP. Please try again.")
+            return redirect("accounts:verify_otp")
+
+        if otp_record.is_expired():
+            messages.error(request, "OTP has expired. Please request a new one.")
+            return redirect("accounts:verify_otp")
+
+        otp_record.is_used = True
+        otp_record.save(update_fields=["is_used"])
+        request.session[PASSWORD_RESET_VERIFIED_SESSION_KEY] = user.id
+        messages.success(request, "OTP verified. Please set your new password.")
+        return redirect("accounts:set_new_password")
+
+    return render(request, "accounts/verify_otp.html", {"messages_in_card": True})
+
+
+def set_new_password_view(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard:home")
+
+    user_id = request.session.get(PASSWORD_RESET_VERIFIED_SESSION_KEY)
+    if not user_id:
+        messages.error(request, "Please verify your OTP first.")
+        return redirect("accounts:verify_otp")
+
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect("accounts:set_new_password")
+
+        user.set_password(password)
+        user.save(update_fields=["password"])
+        request.session.pop(PASSWORD_RESET_USER_SESSION_KEY, None)
+        request.session.pop(PASSWORD_RESET_VERIFIED_SESSION_KEY, None)
+        messages.success(request, "Password reset successful. You can now log in.")
+        return redirect("accounts:login")
+
+    return render(request, "accounts/set_new_password.html", {"messages_in_card": True})
 
 
 @login_required

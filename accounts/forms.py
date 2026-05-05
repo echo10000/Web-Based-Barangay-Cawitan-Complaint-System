@@ -66,28 +66,16 @@ class ResidentProfileForm(forms.ModelForm):
 class StaffProfileForm(forms.ModelForm):
     class Meta:
         model = StaffProfile
-        fields = ["position", "phone_number", "responsibilities"]
-        labels = {"responsibilities": "Staff functions"}
-        help_texts = {
-            "responsibilities": "One function per line. These define what this staff member handles.",
-        }
+        fields = ["position", "phone_number"]
         widgets = {
             "position": forms.TextInput(attrs={"class": "form-control"}),
             "phone_number": forms.TextInput(attrs={"class": "form-control"}),
-            "responsibilities": forms.Textarea(attrs={"class": "form-control", "rows": 7}),
         }
 
 
 class StaffAccountForm(UserCreationForm):
     position = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
-    responsibilities = forms.CharField(
-        label="Staff functions",
-        required=False,
-        initial=StaffProfile.DEFAULT_RESPONSIBILITIES,
-        help_text="One function per line. These define how staff differs from residents and admins.",
-        widget=forms.Textarea(attrs={"class": "form-control", "rows": 7}),
-    )
 
     class Meta:
         model = User
@@ -114,6 +102,5 @@ class StaffAccountForm(UserCreationForm):
                 user=user,
                 position=self.cleaned_data.get("position", ""),
                 phone_number=self.cleaned_data.get("phone_number", ""),
-                responsibilities=self.cleaned_data.get("responsibilities") or StaffProfile.DEFAULT_RESPONSIBILITIES,
             )
         return user

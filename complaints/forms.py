@@ -42,10 +42,16 @@ class ComplaintUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Complaint
-        fields = ["status", "assigned_to"]
+        fields = ["category", "status", "assigned_to"]
         widgets = {
+            "category": forms.Select(attrs={"class": "form-select"}),
             "status": forms.Select(attrs={"class": "form-select"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = ComplaintCategory.objects.filter(is_active=True)
+        self.fields["category"].required = False
 
 
 class ComplaintResponseForm(forms.ModelForm):

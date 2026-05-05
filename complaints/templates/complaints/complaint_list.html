@@ -4,7 +4,7 @@
 <div class="page-header page-header-row">
     <div>
         <h1>Complaints</h1>
-        <p>View and track complaint records.</p>
+        <p>View, filter, and track complaint records.</p>
     </div>
     {% if user.is_resident %}
         <a class="btn btn-primary" href="{% url 'complaints:submit' %}">
@@ -12,29 +12,89 @@
         </a>
     {% endif %}
 </div>
-<div class="content-card mb-3">
-    <form method="get" class="row g-2 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label">Filter by status</label>
-            <select name="status" class="form-select">
+
+<div class="stats-grid mt-4">
+    <div class="stat-card stat-card--total">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--navy">
+            <i class="bi bi-clipboard2-data-fill"></i>
+        </div>
+        <span>Total</span>
+        <strong>{{ total_count }}</strong>
+        <p class="stat-card-desc">Complaint records in this view</p>
+    </div>
+    <div class="stat-card stat-card--pending">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <span>Pending</span>
+        <strong>{{ pending_count }}</strong>
+        <p class="stat-card-desc">Waiting for review</p>
+    </div>
+    <div class="stat-card stat-card--inprogress">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--info">
+            <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <span>In Progress</span>
+        <strong>{{ in_progress_count }}</strong>
+        <p class="stat-card-desc">Currently being handled</p>
+    </div>
+    <div class="stat-card stat-card--resolved">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <span>Resolved</span>
+        <strong>{{ resolved_count }}</strong>
+        <p class="stat-card-desc">Completed complaints</p>
+    </div>
+</div>
+
+<div class="content-card complaint-filter-card mb-3">
+    <form method="get" class="complaint-filter-form">
+        <div class="complaint-search-field">
+            <label class="form-label" for="complaint-search">Search complaints</label>
+            <div class="complaint-search-input-wrap">
+                <i class="bi bi-search"></i>
+                <input
+                    id="complaint-search"
+                    class="form-control"
+                    type="search"
+                    name="q"
+                    value="{{ search_query }}"
+                    placeholder="Search title, resident, staff, category, or ID"
+                >
+            </div>
+        </div>
+        <div class="complaint-filter-main">
+            <label class="form-label" for="complaint-status-filter">Filter by status</label>
+            <select id="complaint-status-filter" name="status" class="form-select">
                 <option value="">All statuses</option>
                 {% for value, label in status_choices %}
                     <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-auto">
-            <button class="btn btn-outline-primary" type="submit">
+        <div class="complaint-filter-actions">
+            <button class="btn btn-primary" type="submit">
                 <i class="bi bi-funnel-fill me-1"></i>Apply
             </button>
+            {% if selected_status or search_query %}
+                <a class="btn btn-outline-secondary" href="{% url 'complaints:list' %}">Clear</a>
+            {% endif %}
+        </div>
+        <div class="complaint-filter-meta">
+            <span>{{ selected_status_label }}</span>
+            <strong>{{ filtered_count }}</strong>
         </div>
     </form>
 </div>
-<div class="content-card entity-card">
+
+<div class="content-card entity-card complaint-records-card">
     <div class="entity-card-header">
         <div>
             <p class="entity-card-title">Complaint Records</p>
-            <p class="entity-card-subtitle">Showing complaint entries for the selected status.</p>
+            <p class="entity-card-subtitle">
+                Showing {{ filtered_count }} complaint{{ filtered_count|pluralize }}{% if selected_status %} marked {{ selected_status_label }}{% endif %}{% if search_query %} matching "{{ search_query }}"{% endif %}.
+            </p>
         </div>
     </div>
     {% include "complaints/_complaint_table.html" %}

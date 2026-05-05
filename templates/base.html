@@ -18,7 +18,7 @@
         {% endif %}
         <main class="app-main">
             <div class="container-fluid py-4">
-                {% if messages %}
+                {% if messages and not messages_in_card %}
                     {% for message in messages %}
                         <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
                             {{ message }}

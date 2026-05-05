@@ -8,6 +8,14 @@
         </div>
         <h1>Sign in</h1>
         <p class="auth-subtitle">Barangay Cawitan Complaint Management System</p>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
         <form method="post" novalidate>
             {% csrf_token %}
             {% for field in form %}
@@ -17,6 +25,11 @@
                     {% for error in field.errors %}
                         <div class="text-danger small mt-1">{{ error }}</div>
                     {% endfor %}
+                    {% if field.html_name == "password" %}
+                        <div class="text-end mt-1">
+                            <a class="small text-muted" href="{% url 'accounts:forgot_password' %}">Forgot Password?</a>
+                        </div>
+                    {% endif %}
                 </div>
             {% endfor %}
             {% if form.non_field_errors %}

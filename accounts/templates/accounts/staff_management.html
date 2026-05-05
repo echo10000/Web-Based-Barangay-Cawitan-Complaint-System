@@ -26,7 +26,6 @@
                     <th>Email</th>
                     <th>Position</th>
                     <th>Phone</th>
-                    <th>Staff Functions</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,13 +36,10 @@
                         <td>{{ person.email|default:"-" }}</td>
                         <td>{{ person.staff_profile.position|default:"-" }}</td>
                         <td>{{ person.staff_profile.phone_number|default:"-" }}</td>
-                        <td class="staff-functions-cell">
-                            {{ person.staff_profile.responsibilities|default:"-"|linebreaksbr }}
-                        </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="6">
+                        <td colspan="5">
                             <div class="entity-empty">
                                 <i class="bi bi-person-badge entity-empty-icon"></i>
                                 <p class="entity-empty-title">No staff accounts yet.</p>

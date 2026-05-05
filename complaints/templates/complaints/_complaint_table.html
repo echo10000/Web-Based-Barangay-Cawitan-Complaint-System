@@ -14,8 +14,15 @@
         <tbody>
             {% for complaint in complaints %}
                 <tr>
-                    <td>{{ complaint.title }}</td>
-                    <td>{{ complaint.category.name|default:"Uncategorized" }}</td>
+                    <td>
+                        <a class="complaint-title-link" href="{% url 'complaints:detail' complaint.pk %}">
+                            {{ complaint.title }}
+                        </a>
+                        <div class="complaint-row-meta">#{{ complaint.id }} &middot; {{ complaint.created_at|timesince }} ago</div>
+                    </td>
+                    <td>
+                        <span class="complaint-category-chip">{{ complaint.category.name|default:"Uncategorized" }}</span>
+                    </td>
                     <td>{% include "complaints/_status_badge.html" with status=complaint.status %}</td>
                     <td>{{ complaint.resident.get_full_name|default:complaint.resident.username }}</td>
                     <td>{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
@@ -24,15 +31,31 @@
                         <a class="btn btn-sm btn-outline-primary" href="{% url 'complaints:detail' complaint.pk %}">
                             <i class="bi bi-eye-fill me-1"></i>View
                         </a>
+                        {% if user.is_staff_member or user.is_barangay_admin %}
+                            <a class="btn btn-sm btn-success" href="{% url 'complaints:update' complaint.pk %}">
+                                <i class="bi bi-pencil-fill me-1"></i>Update
+                            </a>
+                        {% endif %}
                     </td>
                 </tr>
             {% empty %}
                 <tr>
                     <td colspan="7">
                         <div class="entity-empty">
-                            <i class="bi bi-clipboard2-x entity-empty-icon"></i>
+                            <i class="bi bi-inbox-fill entity-empty-icon"></i>
                             <p class="entity-empty-title">No complaints found.</p>
-                            <p class="entity-empty-subtitle">Complaint records matching this view will appear here.</p>
+                            <p class="entity-empty-subtitle">
+                                Try adjusting the search or status filter. Matching complaint records will appear here.
+                            </p>
+                            {% if user.is_resident %}
+                                <a class="btn btn-primary btn-sm mt-3" href="{% url 'complaints:submit' %}">
+                                    <i class="bi bi-plus-circle-fill me-1"></i>Submit Complaint
+                                </a>
+                            {% elif selected_status or search_query %}
+                                <a class="btn btn-outline-primary btn-sm mt-3" href="{% url 'complaints:list' %}">
+                                    View all complaints
+                                </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

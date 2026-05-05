@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.models import User
@@ -33,18 +34,53 @@ def complaint_list_view(request):
     if request.user.is_barangay_admin:
         complaints = Complaint.objects.select_related("resident", "assigned_to", "category")
     elif request.user.is_staff_member:
-        complaints = Complaint.objects.filter(assigned_to=request.user).select_related("resident", "assigned_to", "category")
+        complaints = Complaint.objects.filter(
+            Q(assigned_to=request.user) | Q(assigned_to__isnull=True)
+        ).select_related("resident", "assigned_to", "category")
     else:
         complaints = Complaint.objects.filter(resident=request.user).select_related("resident", "assigned_to", "category")
 
+    all_complaints = complaints
     status = request.GET.get("status")
+    search = request.GET.get("q", "").strip()
     if status:
         complaints = complaints.filter(status=status)
+    if search:
+        search_filter = (
+            Q(title__icontains=search)
+            | Q(description__icontains=search)
+            | Q(category__name__icontains=search)
+            | Q(resident__first_name__icontains=search)
+            | Q(resident__last_name__icontains=search)
+            | Q(resident__username__icontains=search)
+            | Q(assigned_to__first_name__icontains=search)
+            | Q(assigned_to__last_name__icontains=search)
+            | Q(assigned_to__username__icontains=search)
+        )
+        if search.isdigit():
+            search_filter |= Q(id=int(search))
+        complaints = complaints.filter(search_filter)
+    status_counts = {
+        item["status"]: item["total"]
+        for item in all_complaints.values("status").annotate(total=Count("id"))
+    }
+    selected_status_label = dict(Complaint.Status.choices).get(status, "All statuses")
 
     return render(
         request,
         "complaints/complaint_list.html",
-        {"complaints": complaints, "status_choices": Complaint.Status.choices, "selected_status": status},
+        {
+            "complaints": complaints,
+            "status_choices": Complaint.Status.choices,
+            "selected_status": status,
+            "selected_status_label": selected_status_label,
+            "search_query": search,
+            "total_count": all_complaints.count(),
+            "pending_count": status_counts.get(Complaint.Status.PENDING, 0),
+            "in_progress_count": status_counts.get(Complaint.Status.IN_PROGRESS, 0),
+            "resolved_count": status_counts.get(Complaint.Status.RESOLVED, 0),
+            "filtered_count": complaints.count(),
+        },
     )
 
 
@@ -81,7 +117,10 @@ def complaint_detail_view(request, pk):
     can_view = (
         request.user.is_barangay_admin
         or complaint.resident == request.user
-        or (request.user.is_staff_member and complaint.assigned_to == request.user)
+        or (
+            request.user.is_staff_member
+            and (complaint.assigned_to == request.user or complaint.assigned_to is None)
+        )
     )
     if not can_view:
         messages.error(request, "You do not have permission to view this complaint.")
@@ -122,7 +161,7 @@ def mark_all_notifications_read_view(request):
 @staff_or_admin_required
 def update_complaint_view(request, pk):
     complaint = get_object_or_404(Complaint, pk=pk)
-    if request.user.is_staff_member and complaint.assigned_to != request.user:
+    if request.user.is_staff_member and complaint.assigned_to not in (request.user, None):
         messages.error(request, "You can only update complaints assigned to you.")
         return redirect("complaints:list")
 
@@ -132,7 +171,10 @@ def update_complaint_view(request, pk):
 
     if request.method == "POST" and form.is_valid():
         old_status = complaint.status
-        complaint = form.save()
+        complaint = form.save(commit=False)
+        if request.user.is_staff_member and complaint.assigned_to is None:
+            complaint.assigned_to = request.user
+        complaint.save()
         remarks = form.cleaned_data.get("remarks")
         if remarks:
             ComplaintResponse.objects.create(
