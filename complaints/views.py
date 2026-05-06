@@ -246,6 +246,15 @@ def submit_complaint_view(request):
                 message=f"You were automatically assigned complaint '{complaint.title}'.",
                 notification_type=Notification.Type.ASSIGNED,
             )
+            create_notification(
+                user=request.user,
+                complaint=complaint,
+                message=(
+                    f"Your complaint '{complaint.title}' was assigned to "
+                    f"{auto_assignee.get_full_name() or auto_assignee.username}."
+                ),
+                notification_type=Notification.Type.ASSIGNED,
+            )
         messages.success(request, "Complaint submitted successfully.")
         return redirect(complaint.get_absolute_url())
 
@@ -317,11 +326,6 @@ def complaint_detail_view(request, pk):
             messages.success(request, "Reply added successfully.")
             return redirect(complaint.get_absolute_url())
 
-    if request.user.is_resident and complaint.resident == request.user:
-        Notification.objects.filter(user=request.user, complaint=complaint, is_read=False).update(
-            is_read=True,
-            read_at=timezone.now(),
-        )
     latest_hearing = complaint.hearings.first()
     public_status_history = complaint.status_history.exclude(public_remarks="")
     public_responses = complaint.responses.filter(is_public=True)
@@ -355,6 +359,153 @@ def mark_all_notifications_read_view(request):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True, read_at=timezone.now())
         messages.success(request, "All notifications marked as read.")
     return redirect("complaints:notifications")
+
+
+@login_required
+def notification_view_redirect(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, user=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.read_at = timezone.now()
+        notification.save(update_fields=["is_read", "read_at"])
+
+    if notification.link_target:
+        return redirect(notification.link_target)
+    if notification.complaint:
+        return redirect(notification.complaint.get_absolute_url())
+    return redirect("complaints:notifications")
+
+
+def get_workflow_guidance(complaint, action=None):
+    action_tabs = {
+        "complaint": "assignment",
+        "respondent": "respondent",
+        "contact": "contact",
+        "response": "contact",
+        "hearing": "hearing",
+        "attendance": "hearing",
+        "second_notice": "resolution",
+        "escalation": "resolution",
+    }
+    status_guidance = {
+        Complaint.Status.PENDING: (
+            "assignment",
+            "Assign and triage this complaint",
+            "Set the priority, choose a handler, and add any initial public or internal remarks.",
+            "bi-person-check-fill",
+        ),
+        Complaint.Status.UNDER_REVIEW: (
+            "respondent",
+            "Complete respondent details",
+            "Review the other party information before contact or mediation work starts.",
+            "bi-person-lines-fill",
+        ),
+        Complaint.Status.RESPONDENT_NOT_CONTACTED: (
+            "contact",
+            "Record the first contact attempt",
+            "Capture how the respondent was contacted and whether they already gave a response.",
+            "bi-telephone-fill",
+        ),
+        Complaint.Status.RESPONDENT_CONTACTED: (
+            "contact",
+            "Record the respondent response",
+            "Add the response statement or supporting attachment once the other party replies.",
+            "bi-chat-left-text-fill",
+        ),
+        Complaint.Status.WAITING_RESPONDENT_RESPONSE: (
+            "contact",
+            "Follow up on the respondent response",
+            "Update the response status, or record no response if the deadline has passed.",
+            "bi-hourglass-split",
+        ),
+        Complaint.Status.RESPONDENT_RESPONSE_RECORDED: (
+            "hearing",
+            "Schedule hearing or mediation",
+            "Move the complaint into a scheduled hearing or mediation session if needed.",
+            "bi-calendar-event-fill",
+        ),
+        Complaint.Status.NO_RESPONSE: (
+            "resolution",
+            "Record a second notice",
+            "Use the second notice section when the respondent did not answer the first contact.",
+            "bi-envelope-paper-fill",
+        ),
+        Complaint.Status.FAILED_TO_ATTEND: (
+            "resolution",
+            "Record second notice or escalate",
+            "Use the resolution tools when attendance failed or further action is required.",
+            "bi-exclamation-triangle-fill",
+        ),
+        Complaint.Status.SECOND_NOTICE_SENT: (
+            "hearing",
+            "Schedule the next hearing step",
+            "After the second notice, schedule or update hearing and mediation details.",
+            "bi-calendar-plus-fill",
+        ),
+        Complaint.Status.HEARING_SCHEDULED: (
+            "hearing",
+            "Record attendance and result",
+            "After the scheduled date, record attendance and the mediation outcome.",
+            "bi-clipboard2-check-fill",
+        ),
+        Complaint.Status.IN_MEDIATION: (
+            "hearing",
+            "Update mediation result",
+            "Record whether the mediation resolved the issue, needs rescheduling, or must be escalated.",
+            "bi-people-fill",
+        ),
+        Complaint.Status.IN_PROGRESS: (
+            "resolution",
+            "Add resolution updates",
+            "Use status remarks, escalation, or final resolution updates as the case progresses.",
+            "bi-arrow-repeat",
+        ),
+        Complaint.Status.UNRESOLVED: (
+            "resolution",
+            "Escalate or close the unresolved case",
+            "Escalate when barangay-level handling cannot resolve the complaint.",
+            "bi-arrow-up-right-circle-fill",
+        ),
+        Complaint.Status.ESCALATED: (
+            "resolution",
+            "Track escalation outcome",
+            "Keep internal notes and update the status when a higher authority responds.",
+            "bi-arrow-up-right-circle-fill",
+        ),
+        Complaint.Status.RESOLVED: (
+            "resolution",
+            "Review the resolved complaint",
+            "The complaint is resolved. Add only necessary final notes or corrections.",
+            "bi-check-circle-fill",
+        ),
+        Complaint.Status.CLOSED: (
+            "resolution",
+            "Complaint is closed",
+            "This complaint is closed. Review details before making any further change.",
+            "bi-lock-fill",
+        ),
+        Complaint.Status.REJECTED: (
+            "resolution",
+            "Review rejected complaint",
+            "Check remarks and supporting details before reopening or changing the outcome.",
+            "bi-x-circle-fill",
+        ),
+    }
+    active_tab, title, body, icon = status_guidance.get(
+        complaint.status,
+        (
+            "assignment",
+            "Review complaint workflow",
+            "Choose the section that matches the work you need to record.",
+            "bi-kanban-fill",
+        ),
+    )
+    return {
+        "workflow_active_tab": action_tabs.get(action, active_tab),
+        "workflow_recommendation_title": title,
+        "workflow_recommendation_body": body,
+        "workflow_recommendation_icon": icon,
+    }
 
 
 @login_required
@@ -412,6 +563,7 @@ def update_complaint_view(request, pk):
     )
     if request.user.is_staff_member:
         form.fields.pop("assigned_to")
+    workflow_context = get_workflow_guidance(complaint, action)
 
     if request.method == "POST" and action == "complaint":
         old_status = complaint.status
@@ -434,6 +586,7 @@ def update_complaint_view(request, pk):
                     "escalation_form": escalation_form,
                     "latest_hearing": latest_hearing,
                     "staff_assignment_options": get_staff_assignment_options(complaint) if request.user.is_barangay_admin else [],
+                    **workflow_context,
                 },
             )
         complaint = form.save(commit=False)
@@ -501,6 +654,15 @@ def update_complaint_view(request, pk):
                 user=complaint.assigned_to,
                 complaint=complaint,
                 message=f"You were assigned complaint '{complaint.title}'.",
+                notification_type=Notification.Type.ASSIGNED,
+            )
+            create_notification(
+                user=complaint.resident,
+                complaint=complaint,
+                message=(
+                    f"Your complaint '{complaint.title}' was assigned to "
+                    f"{complaint.assigned_to.get_full_name() or complaint.assigned_to.username}."
+                ),
                 notification_type=Notification.Type.ASSIGNED,
             )
         messages.success(request, "Complaint updated successfully.")
@@ -689,6 +851,7 @@ def update_complaint_view(request, pk):
             "escalation_form": escalation_form,
             "latest_hearing": latest_hearing,
             "staff_assignment_options": get_staff_assignment_options(complaint) if request.user.is_barangay_admin else [],
+            **workflow_context,
         },
     )
 

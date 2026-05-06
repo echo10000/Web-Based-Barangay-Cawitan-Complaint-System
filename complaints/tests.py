@@ -97,6 +97,14 @@ class ComplaintNotificationTests(TestCase):
                 notification_type=Notification.Type.ASSIGNED,
             ).exists()
         )
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.resident,
+                complaint=self.complaint,
+                notification_type=Notification.Type.ASSIGNED,
+                message__contains=self.new_staff.username,
+            ).exists()
+        )
 
     def test_resident_follow_up_notifies_admin_and_assignee(self):
         self.client.force_login(self.resident)
@@ -125,3 +133,44 @@ class ComplaintNotificationTests(TestCase):
                 notification_type=Notification.Type.REMARKS_ADDED,
             ).exists()
         )
+
+    def test_resident_detail_does_not_auto_clear_unread_notifications(self):
+        notification = Notification.objects.create(
+            user=self.resident,
+            complaint=self.complaint,
+            message="Your complaint status was updated.",
+            notification_type=Notification.Type.STATUS_CHANGED,
+        )
+        self.client.force_login(self.resident)
+
+        response = self.client.get(reverse("complaints:detail", kwargs={"pk": self.complaint.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        notification.refresh_from_db()
+        self.assertFalse(notification.is_read)
+        self.assertIsNone(notification.read_at)
+
+    def test_notification_view_marks_single_notification_read_and_redirects(self):
+        notification = Notification.objects.create(
+            user=self.resident,
+            complaint=self.complaint,
+            message="Your complaint status was updated.",
+            notification_type=Notification.Type.STATUS_CHANGED,
+        )
+        other_notification = Notification.objects.create(
+            user=self.resident,
+            complaint=self.complaint,
+            message="Another update.",
+            notification_type=Notification.Type.REMARKS_ADDED,
+        )
+        self.client.force_login(self.resident)
+
+        response = self.client.get(reverse("complaints:notification_view", kwargs={"pk": notification.pk}))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], self.complaint.get_absolute_url())
+        notification.refresh_from_db()
+        other_notification.refresh_from_db()
+        self.assertTrue(notification.is_read)
+        self.assertIsNotNone(notification.read_at)
+        self.assertFalse(other_notification.is_read)

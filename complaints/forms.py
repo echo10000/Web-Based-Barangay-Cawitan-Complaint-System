@@ -30,6 +30,34 @@ PUROK_LOCATION_CHOICES = [
     ("Purok 6", "Purok 6"),
     ("Purok 7", "Purok 7"),
 ]
+HEARING_LOCATION_CHOICES = [
+    ("", "Select hearing location"),
+    ("Barangay Hall", "Barangay Hall"),
+    ("Barangay Session Hall", "Barangay Session Hall"),
+    ("Mediation Room", "Mediation Room"),
+    ("Covered Court", "Covered Court"),
+    ("Purok 1-A", "Purok 1-A"),
+    ("Purok 1-B", "Purok 1-B"),
+    ("Purok 2", "Purok 2"),
+    ("Purok 3", "Purok 3"),
+    ("Purok 4", "Purok 4"),
+    ("Purok 5", "Purok 5"),
+    ("Purok 6", "Purok 6"),
+    ("Purok 7", "Purok 7"),
+    ("Other", "Other"),
+]
+ESCALATION_TARGET_CHOICES = [
+    ("", "Select escalation office"),
+    ("Barangay Captain", "Barangay Captain"),
+    ("Lupon / Katarungang Pambarangay", "Lupon / Katarungang Pambarangay"),
+    ("Municipal Social Welfare and Development Office", "Municipal Social Welfare and Development Office"),
+    ("Municipal Health Office", "Municipal Health Office"),
+    ("Municipal Engineering Office", "Municipal Engineering Office"),
+    ("Municipal Police Station", "Municipal Police Station"),
+    ("Bureau of Fire Protection", "Bureau of Fire Protection"),
+    ("City/Municipal Mayor's Office", "City/Municipal Mayor's Office"),
+    ("Other", "Other"),
+]
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -409,10 +437,14 @@ class HearingMediationForm(forms.ModelForm):
         widgets = {
             "date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
             "time": forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
-            "location": forms.TextInput(attrs={"class": "form-control"}),
+            "location": forms.Select(attrs={"class": "form-select"}, choices=HEARING_LOCATION_CHOICES),
             "purpose": forms.TextInput(attrs={"class": "form-control", "placeholder": "Hearing, mediation, or case conference"}),
             "remarks": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["location"].initial = self.fields["location"].initial or "Barangay Hall"
 
 
 class HearingAttendanceForm(forms.ModelForm):
@@ -454,7 +486,7 @@ class EscalationForm(forms.ModelForm):
         fields = ["escalation_date", "escalated_to", "reason", "remarks"]
         widgets = {
             "escalation_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-            "escalated_to": forms.TextInput(attrs={"class": "form-control", "placeholder": "Office, council, or authority"}),
+            "escalated_to": forms.Select(attrs={"class": "form-select"}, choices=ESCALATION_TARGET_CHOICES),
             "reason": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "remarks": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }

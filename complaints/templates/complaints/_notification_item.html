@@ -28,12 +28,8 @@
                 <span class="notif-ref">CMP-{{ item.complaint.id|stringformat:"03d" }}</span>
             {% endif %}
             <span class="notif-time">{{ item.created_at|timesince }} ago</span>
-            {% if item.link_target %}
-                <a class="notif-view-link" href="{{ item.link_target }}">
-                    View <i class="bi bi-arrow-right-short"></i>
-                </a>
-            {% elif item.complaint %}
-                <a class="notif-view-link" href="{% url 'complaints:detail' item.complaint.pk %}">
+            {% if item.link_target or item.complaint %}
+                <a class="notif-view-link" href="{% url 'complaints:notification_view' item.pk %}">
                     View <i class="bi bi-arrow-right-short"></i>
                 </a>
             {% endif %}

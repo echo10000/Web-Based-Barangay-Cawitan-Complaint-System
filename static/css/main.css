@@ -39,6 +39,8 @@ html { scroll-behavior: smooth; }
    ================================================ */
 *, *::before, *::after { box-sizing: border-box; }
 
+[x-cloak] { display: none !important; }
+
 body {
     background: var(--bg);
     color: var(--text);
@@ -4006,6 +4008,178 @@ button,
     font-size: 16px;
 }
 
+.workflow-command {
+    display: grid;
+    gap: 18px;
+}
+
+.workflow-overview-card {
+    display: grid;
+    gap: 16px;
+}
+
+.workflow-overview-main {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, .82fr);
+}
+
+.workflow-status-block,
+.workflow-next-card {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.workflow-kicker {
+    color: #64748B;
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.workflow-title {
+    color: #0F172A;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 10px 0 6px;
+}
+
+.workflow-meta {
+    color: #64748B;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 13px;
+    gap: 7px;
+    margin: 0;
+}
+
+.workflow-next-card {
+    align-items: flex-start;
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+    display: flex;
+    gap: 14px;
+}
+
+.workflow-next-icon {
+    align-items: center;
+    background: #1E3A8A;
+    border-radius: 12px;
+    color: #FFFFFF;
+    display: inline-flex;
+    flex: 0 0 42px;
+    font-size: 19px;
+    height: 42px;
+    justify-content: center;
+}
+
+.workflow-next-title {
+    color: #0F172A;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0 0 4px;
+}
+
+.workflow-next-copy {
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.workflow-path {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.workflow-path span {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 999px;
+    color: #64748B;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 8px 10px;
+    text-align: center;
+}
+
+.workflow-path span.active {
+    background: #ECFDF5;
+    border-color: #86EFAC;
+    color: #166534;
+}
+
+.workflow-tabs {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(15,23,42,.04);
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 8px;
+    position: sticky;
+    top: calc(var(--navbar-h) + 8px);
+    z-index: 10;
+}
+
+.workflow-tab {
+    align-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: #475569;
+    display: flex;
+    font-size: 13px;
+    font-weight: 800;
+    gap: 8px;
+    justify-content: center;
+    min-height: 42px;
+    padding: 9px 10px;
+    transition: background .18s, border-color .18s, color .18s, box-shadow .18s;
+}
+
+.workflow-tab:hover,
+.workflow-tab:focus-visible {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+    color: #1E3A8A;
+    outline: none;
+}
+
+.workflow-tab.active {
+    background: #1E3A8A;
+    border-color: #1E3A8A;
+    box-shadow: 0 8px 18px rgba(30,58,138,.18);
+    color: #FFFFFF;
+}
+
+.workflow-panel {
+    min-width: 0;
+}
+
+.workflow-two-column {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workflow-form-card {
+    max-width: none;
+}
+
+.workflow-empty-state--inside {
+    margin: 24px;
+}
+
 .form-section {
     border: 1px solid #E2E8F0;
     border-radius: 14px;
@@ -4169,6 +4343,20 @@ button,
 }
 
 @media (max-width: 900px) {
+    .workflow-overview-main,
+    .workflow-two-column {
+        grid-template-columns: 1fr;
+    }
+
+    .workflow-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        position: static;
+    }
+
+    .workflow-path {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .entity-toolbar,
     .report-filter-form {
         grid-template-columns: 1fr;
@@ -4205,6 +4393,19 @@ button,
         align-items: flex-start;
         flex-direction: column;
         padding: 18px 0;
+    }
+
+    .workflow-title {
+        font-size: 20px;
+    }
+
+    .workflow-tabs,
+    .workflow-path {
+        grid-template-columns: 1fr;
+    }
+
+    .workflow-tab {
+        justify-content: flex-start;
     }
 
     .form-section {
