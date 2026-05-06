@@ -3343,3 +3343,484 @@ button,
     background: rgba(220, 38, 38, .15) !important;
     color: #fca5a5 !important;
 }
+
+/* ================================================
+   ENTITY & DASHBOARD UX REFRESH
+   Shared final layer for management pages, reports,
+   forms, and case detail screens.
+   ================================================ */
+.container-fluid.py-4 {
+    padding-left: clamp(16px, 2vw, 28px);
+    padding-right: clamp(16px, 2vw, 28px);
+}
+
+.app-main {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0) 240px),
+        #F5F7FB;
+}
+
+.nav-global-search {
+    align-items: center;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px;
+    color: rgba(255,255,255,.78);
+    display: flex;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 12px;
+    width: 300px;
+}
+
+.nav-global-search input {
+    background: transparent;
+    border: 0;
+    color: #ffffff;
+    font-size: 13px;
+    outline: 0;
+    width: 100%;
+}
+
+.nav-global-search input::placeholder {
+    color: rgba(255,255,255,.62);
+}
+
+.entity-stats-grid {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.entity-toolbar-card {
+    background:
+        linear-gradient(180deg, rgba(248,250,252,.8), rgba(255,255,255,0) 54px),
+        #ffffff;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(15,23,42,.07), 0 2px 8px rgba(15,23,42,.04);
+    padding: 20px;
+}
+
+.entity-toolbar {
+    align-items: end;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(280px, 1fr) auto;
+}
+
+.report-filter-form {
+    grid-template-columns: minmax(170px, 220px) minmax(170px, 220px) auto;
+    justify-content: start;
+}
+
+.entity-search {
+    min-width: 0;
+}
+
+.entity-toolbar-actions {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.records-card {
+    border-radius: 16px;
+    box-shadow: 0 18px 42px rgba(15,23,42,.08), 0 3px 10px rgba(15,23,42,.04);
+    overflow: hidden;
+}
+
+.records-card .table thead th,
+.complaint-records-card .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.person-cell {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    min-width: 210px;
+}
+
+.person-avatar {
+    align-items: center;
+    background: #E0F2FE;
+    border: 1px solid #BAE6FD;
+    border-radius: 999px;
+    color: #0369A1;
+    display: inline-flex;
+    flex: 0 0 38px;
+    font-size: 14px;
+    font-weight: 800;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+}
+
+.entity-chip {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 999px;
+    color: #475569;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+
+.detail-contact-link {
+    color: #1E3A8A;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.detail-contact-link:hover {
+    text-decoration: underline;
+}
+
+.entity-empty-title,
+.entity-empty-title::before {
+    content: none !important;
+    display: block;
+    font-size: 17px !important;
+}
+
+.report-panel {
+    padding: 0;
+    overflow: hidden;
+}
+
+.report-panel-header {
+    align-items: center;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+}
+
+.report-panel-sub {
+    color: #94A3B8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.report-row {
+    align-items: center;
+    border-bottom: 1px solid #F1F5F9;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 14px 20px;
+}
+
+.report-row:last-child {
+    border-bottom: 0;
+}
+
+.report-row span {
+    color: #334155;
+    display: flex;
+    flex-direction: column;
+    font-weight: 700;
+    min-width: 0;
+}
+
+.report-row small {
+    color: #94A3B8;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.report-row strong {
+    align-items: center;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 999px;
+    color: #0F172A;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 800;
+    justify-content: center;
+    min-width: 34px;
+    padding: 5px 10px;
+}
+
+.modern-form-card {
+    border-radius: 16px;
+    box-shadow: 0 18px 42px rgba(15,23,42,.08), 0 3px 10px rgba(15,23,42,.04);
+    max-width: 980px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.form-card-heading {
+    align-items: center;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    gap: 14px;
+    padding: 22px 24px;
+}
+
+.form-card-icon {
+    align-items: center;
+    background: #EFF6FF;
+    border: 1px solid #DBEAFE;
+    border-radius: 12px;
+    color: #1E3A8A;
+    display: inline-flex;
+    flex: 0 0 44px;
+    font-size: 20px;
+    height: 44px;
+    justify-content: center;
+    width: 44px;
+}
+
+.modern-form-card form,
+.modern-form-card > .assignment-advisor,
+.modern-form-card > .submit-reminder {
+    margin-left: 24px;
+    margin-right: 24px;
+}
+
+.modern-form-card form {
+    padding: 22px 0 24px;
+}
+
+.form-section {
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    padding: 18px;
+}
+
+.form-section-heading {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.form-section-heading::before {
+    background: #22C55E;
+    border-radius: 999px;
+    content: "";
+    height: 18px;
+    width: 4px;
+}
+
+.form-section-heading span {
+    color: #0F172A;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.form-action-bar {
+    align-items: center;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 12px;
+}
+
+.detail-layout .content-card {
+    border-radius: 16px;
+}
+
+.complaint-summary-card {
+    position: sticky;
+    top: calc(var(--navbar-h) + 18px);
+}
+
+.summary-card-top {
+    align-items: start;
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+}
+
+.summary-case-id {
+    color: #0F172A;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+}
+
+.summary-list {
+    display: grid;
+    gap: 10px;
+}
+
+.summary-item {
+    align-items: center;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 12px;
+}
+
+.summary-item span {
+    color: #64748B;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.summary-item strong {
+    color: #0F172A;
+    font-size: 13px;
+    text-align: right;
+}
+
+.evidence-card {
+    overflow: hidden;
+}
+
+.evidence-link--modern {
+    align-items: center;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    color: #0F172A;
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 12px;
+    text-decoration: none;
+}
+
+.evidence-link--modern:hover {
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+    text-decoration: none;
+}
+
+.evidence-icon {
+    align-items: center;
+    background: #DBEAFE;
+    border-radius: 10px;
+    color: #2563EB;
+    display: inline-flex;
+    flex: 0 0 38px;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+}
+
+.evidence-link--modern strong,
+.evidence-link--modern small {
+    display: block;
+    max-width: 210px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.evidence-link--modern small {
+    color: #64748B;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.evidence-empty {
+    margin: 0;
+    padding: 30px 18px;
+}
+
+@media (max-width: 1100px) {
+    .entity-stats-grid {
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+    }
+
+    .nav-global-search {
+        width: 240px;
+    }
+}
+
+@media (max-width: 900px) {
+    .entity-toolbar,
+    .report-filter-form {
+        grid-template-columns: 1fr;
+    }
+
+    .entity-toolbar-actions {
+        align-items: stretch;
+    }
+
+    .entity-toolbar-actions .btn,
+    .entity-toolbar-actions .complaint-filter-meta {
+        justify-content: center;
+    }
+
+    .complaint-summary-card {
+        position: static;
+    }
+}
+
+@media (max-width: 560px) {
+    .entity-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-card-heading,
+    .modern-form-card form,
+    .modern-form-card > .assignment-advisor,
+    .modern-form-card > .submit-reminder {
+        margin-left: 16px;
+        margin-right: 16px;
+    }
+
+    .form-card-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 18px 0;
+    }
+
+    .form-section {
+        padding: 14px;
+    }
+
+    .form-action-bar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+@media print {
+    .app-navbar,
+    .app-sidebar,
+    .app-footer,
+    .entity-toolbar-card,
+    .page-header .btn,
+    .form-action-bar {
+        display: none !important;
+    }
+
+    .app-shell {
+        display: block;
+    }
+
+    .content-card,
+    .stat-card {
+        box-shadow: none !important;
+    }
+}

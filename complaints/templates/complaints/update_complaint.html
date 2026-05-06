@@ -1,11 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Update Complaint | Barangay Cawitan{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h1>Update Complaint</h1>
-    <p>{{ complaint.title }}</p>
+<div class="page-header page-header-row">
+    <div>
+        <h1>Update Complaint</h1>
+        <p>{{ complaint.title }}</p>
+    </div>
+    <a class="btn btn-outline-primary" href="{% url 'complaints:detail' complaint.pk %}">
+        <i class="bi bi-arrow-left me-1"></i>Back to Detail
+    </a>
 </div>
-<div class="content-card form-card">
+<div class="content-card form-card modern-form-card">
+    <div class="form-card-heading">
+        <div class="form-card-icon"><i class="bi bi-clipboard-check-fill"></i></div>
+        <div>
+            <p class="entity-card-title">Complaint Workflow</p>
+            <p class="entity-card-subtitle">Update assignment, priority, status, and resident-facing remarks.</p>
+        </div>
+    </div>
     {% if staff_assignment_options %}
         <div class="assignment-advisor mb-4">
             <div class="assignment-advisor-header">
@@ -42,16 +54,24 @@
     {% endif %}
     <form method="post" novalidate>
         {% csrf_token %}
-        {% for field in form %}
-            <div class="mb-3">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% for error in field.errors %}
-                    <div class="text-danger small mt-1">{{ error }}</div>
-                {% endfor %}
+        <div class="form-section">
+            <div class="form-section-heading">
+                <span>Status & Assignment</span>
             </div>
-        {% endfor %}
-        <div class="d-flex gap-2 mt-2">
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+        <div class="form-action-bar">
             <button class="btn btn-success" type="submit">
                 <i class="bi bi-check-circle-fill me-1"></i>Save Update
             </button>

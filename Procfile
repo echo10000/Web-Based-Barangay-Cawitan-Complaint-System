@@ -1,0 +1,1 @@
+web: gunicorn barangay_cawitan_system.wsgi --log-file -

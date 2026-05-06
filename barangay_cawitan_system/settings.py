@@ -5,8 +5,8 @@ from django.contrib.messages import constants as messages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config("SECRET_KEY", default="dev-only-secret-key") or "dev-only-secret-key"
-DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -22,6 +22,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -79,6 +80,9 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# WhiteNoise configuration
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -96,7 +100,11 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER", default="")
-SMS_WEBHOOK_URL = config("SMS_WEBHOOK_URL", default="")
+
+# Semaphore SMS Configuration
+SEMAPHORE_API_KEY = config("SEMAPHORE_API_KEY", default="")
+SEMAPHORE_SENDER_NAME = config("SEMAPHORE_SENDER_NAME", default="SEMAPHORE")
+SEMAPHORE_API_URL = "https://api.semaphore.co/api/v4/messages"
 
 MESSAGE_TAGS = {
     messages.ERROR: "danger",

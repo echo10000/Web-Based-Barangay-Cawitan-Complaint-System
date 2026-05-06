@@ -4,7 +4,9 @@ from django.db.models import Count
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
+from accounts.models import User
 from .forms import ComplaintForm, ComplaintUpdateForm
 from .models import Complaint, ComplaintResponse, ComplaintStatusHistory, Notification, UploadedEvidence
 from .services import choose_auto_assignee, create_notification, get_staff_assignment_options
@@ -275,15 +277,41 @@ def delete_complaint_view(request, pk):
 @login_required
 @admin_required
 def reports_view(request):
-    by_status = Complaint.objects.values("status").annotate(total=Count("id")).order_by("status")
-    by_category = Complaint.objects.values("category__name").annotate(total=Count("id")).order_by("category__name")
+    date_from = parse_date(request.GET.get("date_from") or "")
+    date_to = parse_date(request.GET.get("date_to") or "")
+    complaints = Complaint.objects.all()
+    if date_from:
+        complaints = complaints.filter(created_at__date__gte=date_from)
+    if date_to:
+        complaints = complaints.filter(created_at__date__lte=date_to)
+
+    status_labels = dict(Complaint.Status.choices)
+    by_status = [
+        {**row, "label": status_labels.get(row["status"], row["status"])}
+        for row in complaints.values("status").annotate(total=Count("id")).order_by("status")
+    ]
+    by_category = complaints.values("category__name").annotate(total=Count("id")).order_by("category__name")
     staff_workload = (
         User.objects.filter(role=User.Role.STAFF)
-        .annotate(total_assigned=Count("assigned_complaints"))
+        .annotate(total_assigned=Count("assigned_complaints", filter=Q(assigned_complaints__in=complaints)))
         .order_by("last_name", "first_name")
     )
+    total_complaints = complaints.count()
+    resolved_count = complaints.filter(status=Complaint.Status.RESOLVED).count()
+    pending_count = complaints.filter(status=Complaint.Status.PENDING).count()
+    overdue_count = sum(1 for complaint in complaints if complaint.is_overdue)
     return render(
         request,
         "complaints/reports.html",
-        {"by_status": by_status, "by_category": by_category, "staff_workload": staff_workload},
+        {
+            "by_status": by_status,
+            "by_category": by_category,
+            "staff_workload": staff_workload,
+            "total_complaints": total_complaints,
+            "resolved_count": resolved_count,
+            "pending_count": pending_count,
+            "overdue_count": overdue_count,
+            "date_from": request.GET.get("date_from", ""),
+            "date_to": request.GET.get("date_to", ""),
+        },
     )

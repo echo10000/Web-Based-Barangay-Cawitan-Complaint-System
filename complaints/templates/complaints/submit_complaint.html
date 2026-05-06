@@ -8,12 +8,24 @@
 {% block title %}Submit Complaint | Barangay Cawitan{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Submit Complaint</h1>
-    <p>Provide clear details so barangay staff can respond properly.</p>
+<div class="page-header page-header-row">
+    <div>
+        <h1>Submit Complaint</h1>
+        <p>Provide clear details so barangay staff can respond properly.</p>
+    </div>
+    <a class="btn btn-outline-primary" href="{% url 'complaints:list' %}">
+        <i class="bi bi-arrow-left me-1"></i>My Complaints
+    </a>
 </div>
 
-<div class="content-card form-card">
+<div class="content-card form-card modern-form-card">
+    <div class="form-card-heading">
+        <div class="form-card-icon"><i class="bi bi-send-fill"></i></div>
+        <div>
+            <p class="entity-card-title">Complaint Information</p>
+            <p class="entity-card-subtitle">Detailed reports help staff assess priority and assign the right handler.</p>
+        </div>
+    </div>
 
     {# ── Reminder banner ─────────────────────────── #}
     <div class="submit-reminder">
@@ -31,6 +43,10 @@
 
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
+        <div class="form-section">
+            <div class="form-section-heading">
+                <span>Incident Details</span>
+            </div>
         {% for field in form %}
 
             {# Category — custom tile picker #}
@@ -92,8 +108,9 @@
             {% endif %}
 
         {% endfor %}
+        </div>
 
-        <div class="d-flex gap-2 mt-3">
+        <div class="form-action-bar">
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-send-fill me-1"></i>Submit Complaint
             </button>

@@ -107,7 +107,7 @@
 {% endwith %}
 
 {# ── MAIN CONTENT ─────────────────────────────────── #}
-<div class="row">
+<div class="row detail-layout">
     <div class="col-lg-8">
         <div class="content-card">
             <h2 class="section-kicker">Complaint Details</h2>
@@ -195,14 +195,62 @@
         </div>
     </div>
     <div class="col-lg-4 mt-4 mt-lg-0">
-        <div class="content-card">
+        <div class="content-card complaint-summary-card mb-4">
+            <div class="summary-card-top">
+                <div>
+                    <p class="section-kicker mb-1">Case Summary</p>
+                    <h2 class="summary-case-id">#{{ complaint.id }}</h2>
+                </div>
+                {% include "complaints/_status_badge.html" with status=complaint.status %}
+            </div>
+            <div class="summary-list">
+                <div class="summary-item">
+                    <span>Priority</span>
+                    <strong>{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</strong>
+                </div>
+                <div class="summary-item">
+                    <span>SLA</span>
+                    <strong>
+                        {% if complaint.deadline_at %}
+                            <span class="sla-badge {% if complaint.is_overdue %}sla-badge--overdue{% elif complaint.is_closed %}sla-badge--closed{% else %}sla-badge--on-track{% endif %}">{{ complaint.sla_label }}</span>
+                        {% else %}
+                            Not set
+                        {% endif %}
+                    </strong>
+                </div>
+                <div class="summary-item">
+                    <span>Category</span>
+                    <strong>{{ complaint.category.name|default:"Uncategorized" }}</strong>
+                </div>
+                <div class="summary-item">
+                    <span>Assigned Staff</span>
+                    <strong>{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}Unassigned{% endif %}</strong>
+                </div>
+            </div>
+            {% if user.is_staff_member or user.is_barangay_admin %}
+                <a class="btn btn-success w-100 mt-3" href="{% url 'complaints:update' complaint.pk %}">
+                    <i class="bi bi-pencil-fill me-1"></i>Update Complaint
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="content-card evidence-card">
             <div class="section-title"><i class="bi bi-paperclip me-1"></i>Evidence</div>
             {% for evidence in complaint.evidence_files.all %}
-                <a class="evidence-link" href="{{ evidence.file.url }}" target="_blank">
-                    <i class="bi bi-file-earmark me-1"></i>{{ evidence.file.name }}
+                <a class="evidence-link evidence-link--modern" href="{{ evidence.file.url }}" target="_blank">
+                    <span class="evidence-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
+                    <span>
+                        <strong>{{ evidence.file.name }}</strong>
+                        <small>Open uploaded file</small>
+                    </span>
+                    <i class="bi bi-box-arrow-up-right ms-auto"></i>
                 </a>
             {% empty %}
-                <p class="entity-muted mb-0">No uploaded evidence.</p>
+                <div class="entity-empty evidence-empty">
+                    <i class="bi bi-file-earmark-x entity-empty-icon"></i>
+                    <p class="entity-empty-title">No uploaded evidence.</p>
+                    <p class="entity-empty-subtitle">Files attached by the resident will appear here.</p>
+                </div>
             {% endfor %}
         </div>
     </div>

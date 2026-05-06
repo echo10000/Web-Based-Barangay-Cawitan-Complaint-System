@@ -26,6 +26,12 @@
             {% endif %}
             <ul class="navbar-nav {% if user.is_authenticated %}ms-auto{% endif %} align-items-lg-center gap-2">
                 {% if user.is_authenticated %}
+                    <li class="nav-item d-none d-xl-block">
+                        <form class="nav-global-search" method="get" action="{% url 'complaints:list' %}">
+                            <i class="bi bi-search"></i>
+                            <input type="search" name="q" placeholder="Search complaints..." aria-label="Search complaints">
+                        </form>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link nav-notification-link" href="{% url 'complaints:notifications' %}" aria-label="Notifications">
                             <i class="bi bi-bell-fill"></i>

@@ -5,6 +5,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.conf import settings
 
@@ -205,11 +206,65 @@ def create_staff_view(request):
 @admin_required
 def resident_management_view(request):
     residents = User.objects.filter(role=User.Role.RESIDENT).select_related("resident_profile").order_by("last_name")
-    return render(request, "accounts/resident_management.html", {"residents": residents})
+    search = request.GET.get("q", "").strip()
+    total_residents = residents.count()
+    complete_profiles = residents.exclude(
+        Q(email="")
+        | Q(first_name="")
+        | Q(last_name="")
+        | Q(resident_profile__phone_number="")
+        | Q(resident_profile__address="")
+    ).count()
+    if search:
+        residents = residents.filter(
+            Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(username__icontains=search)
+            | Q(email__icontains=search)
+            | Q(resident_profile__phone_number__icontains=search)
+            | Q(resident_profile__address__icontains=search)
+        )
+    return render(
+        request,
+        "accounts/resident_management.html",
+        {
+            "residents": residents,
+            "search_query": search,
+            "total_residents": total_residents,
+            "filtered_count": residents.count(),
+            "complete_profiles": complete_profiles,
+            "incomplete_profiles": total_residents - complete_profiles,
+        },
+    )
 
 
 @login_required
 @admin_required
 def staff_management_view(request):
     staff = User.objects.filter(role=User.Role.STAFF).select_related("staff_profile").order_by("last_name")
-    return render(request, "accounts/staff_management.html", {"staff": staff})
+    search = request.GET.get("q", "").strip()
+    total_staff = staff.count()
+    available_staff = staff.filter(staff_profile__availability=StaffProfile.Availability.AVAILABLE).count()
+    busy_staff = staff.filter(staff_profile__availability=StaffProfile.Availability.BUSY).count()
+    if search:
+        staff = staff.filter(
+            Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(username__icontains=search)
+            | Q(email__icontains=search)
+            | Q(staff_profile__position__icontains=search)
+            | Q(staff_profile__department__icontains=search)
+            | Q(staff_profile__phone_number__icontains=search)
+        )
+    return render(
+        request,
+        "accounts/staff_management.html",
+        {
+            "staff": staff,
+            "search_query": search,
+            "total_staff": total_staff,
+            "filtered_count": staff.count(),
+            "available_staff": available_staff,
+            "busy_staff": busy_staff,
+        },
+    )

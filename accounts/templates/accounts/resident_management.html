@@ -1,15 +1,72 @@
 {% extends "base.html" %}
 {% block title %}Residents | Barangay Cawitan{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h1>Residents</h1>
-    <p>Registered resident accounts and contact details.</p>
+<div class="page-header page-header-row">
+    <div>
+        <h1>Residents</h1>
+        <p>Registered resident accounts and contact details.</p>
+    </div>
+    <button class="btn btn-outline-primary" type="button" onclick="window.print()">
+        <i class="bi bi-printer-fill me-1"></i>Print Directory
+    </button>
 </div>
-<div class="content-card entity-card">
+
+<div class="stats-grid entity-stats-grid">
+    <div class="stat-card stat-card--total">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--navy">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <span>Total Residents</span>
+        <strong>{{ total_residents }}</strong>
+        <p class="stat-card-desc">Registered resident accounts</p>
+    </div>
+    <div class="stat-card stat-card--emerald">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-patch-check-fill"></i>
+        </div>
+        <span>Complete Profiles</span>
+        <strong>{{ complete_profiles }}</strong>
+        <p class="stat-card-desc">Ready for follow-ups</p>
+    </div>
+    <div class="stat-card stat-card--pending">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
+            <i class="bi bi-person-exclamation"></i>
+        </div>
+        <span>Needs Updates</span>
+        <strong>{{ incomplete_profiles }}</strong>
+        <p class="stat-card-desc">Missing key contact details</p>
+    </div>
+</div>
+
+<div class="content-card entity-toolbar-card mb-3">
+    <form method="get" class="entity-toolbar">
+        <div class="entity-search">
+            <label class="form-label" for="resident-search">Search residents</label>
+            <div class="complaint-search-input-wrap">
+                <i class="bi bi-search"></i>
+                <input id="resident-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search name, username, email, phone, or address">
+            </div>
+        </div>
+        <div class="entity-toolbar-actions">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-search me-1"></i>Search
+            </button>
+            {% if search_query %}
+                <a class="btn btn-outline-secondary" href="{% url 'accounts:residents' %}">Clear</a>
+            {% endif %}
+            <div class="complaint-filter-meta">
+                <span>Showing</span>
+                <strong>{{ filtered_count }}</strong>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="content-card entity-card records-card">
     <div class="entity-card-header">
         <div>
             <p class="entity-card-title">Resident Directory</p>
-            <p class="entity-card-subtitle">{{ residents|length }} registered account{{ residents|length|pluralize }}</p>
+            <p class="entity-card-subtitle">{{ filtered_count }} resident account{{ filtered_count|pluralize }}{% if search_query %} matching "{{ search_query }}"{% endif %}</p>
         </div>
     </div>
     <div class="table-responsive">
@@ -26,10 +83,24 @@
             <tbody>
                 {% for resident in residents %}
                     <tr>
-                        <td>{{ resident.get_full_name|default:"Not provided" }}</td>
-                        <td>{{ resident.username }}</td>
+                        <td>
+                            <div class="person-cell">
+                                <span class="person-avatar">{{ resident.first_name|default:resident.username|first|upper }}</span>
+                                <div>
+                                    <strong>{{ resident.get_full_name|default:"Not provided" }}</strong>
+                                    <div class="complaint-row-meta">Joined {{ resident.date_joined|date:"M d, Y" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="entity-chip">{{ resident.username }}</span></td>
                         <td>{{ resident.email|default:"-" }}</td>
-                        <td>{{ resident.resident_profile.phone_number|default:"-" }}</td>
+                        <td>
+                            {% if resident.resident_profile.phone_number %}
+                                <a href="tel:{{ resident.resident_profile.phone_number }}" class="detail-contact-link">{{ resident.resident_profile.phone_number }}</a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td>{{ resident.resident_profile.address|default:"-" }}</td>
                     </tr>
                 {% empty %}
@@ -37,8 +108,11 @@
                         <td colspan="5">
                             <div class="entity-empty">
                                 <i class="bi bi-people entity-empty-icon"></i>
-                                <p class="entity-empty-title">No residents yet.</p>
-                                <p class="entity-empty-subtitle">Registered residents will appear here.</p>
+                                <p class="entity-empty-title">No residents found.</p>
+                                <p class="entity-empty-subtitle">Try another search or clear the filter to view all registered residents.</p>
+                                {% if search_query %}
+                                    <a class="btn btn-outline-primary btn-sm mt-3" href="{% url 'accounts:residents' %}">View all residents</a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

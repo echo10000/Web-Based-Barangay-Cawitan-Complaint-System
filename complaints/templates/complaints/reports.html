@@ -4,7 +4,7 @@
 <div class="page-header page-header-row">
     <div>
         <h1>Reports</h1>
-        <p>Simple complaint summaries for monitoring.</p>
+        <p>Complaint summaries, workload visibility, and print-ready monitoring.</p>
     </div>
     <div class="d-flex gap-2">
         <button class="btn btn-primary" onclick="window.print()">
@@ -12,13 +12,73 @@
         </button>
     </div>
 </div>
-<div class="row">
+
+<div class="content-card entity-toolbar-card mb-3">
+    <form method="get" class="entity-toolbar report-filter-form">
+        <div>
+            <label class="form-label" for="date-from">From</label>
+            <input id="date-from" class="form-control" type="date" name="date_from" value="{{ date_from }}">
+        </div>
+        <div>
+            <label class="form-label" for="date-to">To</label>
+            <input id="date-to" class="form-control" type="date" name="date_to" value="{{ date_to }}">
+        </div>
+        <div class="entity-toolbar-actions">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-funnel-fill me-1"></i>Apply
+            </button>
+            {% if date_from or date_to %}
+                <a class="btn btn-outline-secondary" href="{% url 'complaints:reports' %}">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<div class="stats-grid admin-stats-grid">
+    <div class="stat-card stat-card--total">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--navy">
+            <i class="bi bi-clipboard2-data-fill"></i>
+        </div>
+        <span>Total</span>
+        <strong>{{ total_complaints }}</strong>
+        <p class="stat-card-desc">Complaints in this report</p>
+    </div>
+    <div class="stat-card stat-card--pending">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <span>Pending</span>
+        <strong>{{ pending_count }}</strong>
+        <p class="stat-card-desc">Waiting for review</p>
+    </div>
+    <div class="stat-card stat-card--resolved">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <span>Resolved</span>
+        <strong>{{ resolved_count }}</strong>
+        <p class="stat-card-desc">Completed records</p>
+    </div>
+    <div class="stat-card stat-card--danger">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--danger">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <span>Overdue</span>
+        <strong>{{ overdue_count }}</strong>
+        <p class="stat-card-desc">Past SLA deadline</p>
+    </div>
+</div>
+
+<div class="row g-3">
     <div class="col-lg-4">
-        <div class="content-card">
-            <div class="section-title"><i class="bi bi-pie-chart-fill me-1"></i>By Status</div>
+        <div class="content-card report-panel h-100">
+            <div class="report-panel-header">
+                <div class="section-title mb-0"><i class="bi bi-pie-chart-fill me-1"></i>By Status</div>
+                <span class="report-panel-sub">Current pipeline</span>
+            </div>
             {% for row in by_status %}
-                <div class="report-row">
-                    <span>{{ row.status }}</span>
+                <div class="report-row report-row--bar">
+                    <span>{{ row.label }}</span>
                     <strong>{{ row.total }}</strong>
                 </div>
             {% empty %}
@@ -26,11 +86,14 @@
             {% endfor %}
         </div>
     </div>
-    <div class="col-lg-4 mt-4 mt-lg-0">
-        <div class="content-card">
-            <div class="section-title"><i class="bi bi-tags-fill me-1"></i>By Category</div>
+    <div class="col-lg-4">
+        <div class="content-card report-panel h-100">
+            <div class="report-panel-header">
+                <div class="section-title mb-0"><i class="bi bi-tags-fill me-1"></i>By Category</div>
+                <span class="report-panel-sub">Complaint types</span>
+            </div>
             {% for row in by_category %}
-                <div class="report-row">
+                <div class="report-row report-row--bar">
                     <span>{{ row.category__name|default:"Uncategorized" }}</span>
                     <strong>{{ row.total }}</strong>
                 </div>
@@ -39,12 +102,18 @@
             {% endfor %}
         </div>
     </div>
-    <div class="col-lg-4 mt-4 mt-lg-0">
-        <div class="content-card">
-            <div class="section-title"><i class="bi bi-bar-chart-fill me-1"></i>Staff Workload</div>
+    <div class="col-lg-4">
+        <div class="content-card report-panel h-100">
+            <div class="report-panel-header">
+                <div class="section-title mb-0"><i class="bi bi-bar-chart-fill me-1"></i>Staff Workload</div>
+                <span class="report-panel-sub">Assigned cases</span>
+            </div>
             {% for person in staff_workload %}
-                <div class="report-row">
-                    <span>{{ person.get_full_name|default:person.username }}</span>
+                <div class="report-row report-row--bar">
+                    <span>
+                        {{ person.get_full_name|default:person.username }}
+                        <small>{{ person.staff_profile.position|default:"Staff" }}</small>
+                    </span>
                     <strong>{{ person.total_assigned }}</strong>
                 </div>
             {% empty %}
