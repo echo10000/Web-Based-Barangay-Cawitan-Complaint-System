@@ -28,10 +28,33 @@ class User(AbstractUser):
 
 
 class ResidentProfile(models.Model):
+    class VerificationStatus(models.TextChoices):
+        UNVERIFIED = "UNVERIFIED", "Unverified"
+        PENDING = "PENDING", "Pending Verification"
+        VERIFIED = "VERIFIED", "Verified"
+        REJECTED = "REJECTED", "Rejected"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="resident_profile")
     phone_number = models.CharField(max_length=20, blank=True)
     address = models.CharField(max_length=255)
+    purok = models.CharField(max_length=100, blank=True)
+    household_number = models.CharField(max_length=50, blank=True)
     birth_date = models.DateField(null=True, blank=True)
+    valid_id_image = models.ImageField(upload_to="resident_ids/", null=True, blank=True)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.UNVERIFIED,
+    )
+    verification_notes = models.TextField(blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_residents",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -77,8 +100,12 @@ class StaffProfile(models.Model):
 class PasswordResetOTP(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="password_reset_otps")
     otp = models.CharField(max_length=6)
+    otp_hash = models.CharField(max_length=128, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
     is_used = models.BooleanField(default=False)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    resend_count = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         ordering = ["-created_at"]

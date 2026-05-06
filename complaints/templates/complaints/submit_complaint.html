@@ -40,70 +40,137 @@
         </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate class="complaint-wizard" id="complaint-wizard">
         {% csrf_token %}
-        <div class="form-section">
+
+        <div class="wizard-progress" aria-label="Complaint form progress">
+            <button class="wizard-step-indicator active" type="button" data-step-target="0" aria-current="step">
+                <span class="wizard-step-number">1</span>
+                <span class="wizard-step-copy">
+                    <span class="wizard-step-label">Incident</span>
+                    <span class="wizard-step-hint">Category and story</span>
+                </span>
+            </button>
+            <button class="wizard-step-indicator" type="button" data-step-target="1">
+                <span class="wizard-step-number">2</span>
+                <span class="wizard-step-copy">
+                    <span class="wizard-step-label">Details</span>
+                    <span class="wizard-step-hint">Place, date, evidence</span>
+                </span>
+            </button>
+            <button class="wizard-step-indicator" type="button" data-step-target="2">
+                <span class="wizard-step-number">3</span>
+                <span class="wizard-step-copy">
+                    <span class="wizard-step-label">Respondent</span>
+                    <span class="wizard-step-hint">Other party info</span>
+                </span>
+            </button>
+            <button class="wizard-step-indicator" type="button" data-step-target="3">
+                <span class="wizard-step-number">4</span>
+                <span class="wizard-step-copy">
+                    <span class="wizard-step-label">Review</span>
+                    <span class="wizard-step-hint">Consent and submit</span>
+                </span>
+            </button>
+        </div>
+
+        <div class="wizard-panel active" data-step-panel>
             <div class="form-section-heading">
-                <span>Incident Details</span>
+                <span>Incident Basics</span>
             </div>
-            {% for field in form %}
-                {% if field.html_name|slice:":11" != "respondent_" and field.html_name != "privacy_consent" and field.html_name != "accuracy_certification" and field.html_name != "contact_permission" %}
-                    {% if field.html_name == 'category' %}
-                        <div class="mb-4">
-                            <label class="form-label">{{ field.label }}</label>
-                            <div class="hidden-form-control">{{ field }}</div>
-                            <div class="category-grid" id="category-grid">
-                                {% for choice_value, choice_label in field.field.choices %}
-                                    {% if choice_value %}
-                                        <div class="category-tile" data-value="{{ choice_value }}">
-                                            <i class="bi bi-tag-fill category-icon"></i>
-                                            <span class="category-label">{{ choice_label }}</span>
-                                            <i class="bi bi-check-circle-fill category-check"></i>
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                            <div class="category-selected-label" id="category-selected-label">No category selected</div>
-                            {% for error in field.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                    {% elif field.html_name == 'contact_number' %}
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ field.id_for_label }}">
-                                <i class="bi bi-telephone-fill me-1 icon-text-primary"></i>{{ field.label }}
-                            </label>
-                            <div class="contact-input-wrap">
-                                <span class="contact-input-prefix"><i class="bi bi-telephone"></i></span>
-                                {{ field }}
-                            </div>
-                            <div class="form-text">
-                                Provide a number where barangay staff can reach you about this complaint.
-                                {% if field.value %}Pre-filled from your profile. Update if needed.{% endif %}
-                            </div>
-                            {% for error in field.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <div class="form-text">{{ field.help_text }}</div>
+            <p class="form-text mb-3">Start with what happened and what type of concern it is.</p>
+
+            {% with field=form.category %}
+                <div class="mb-4">
+                    <label class="form-label">{{ field.label }}</label>
+                    <div class="hidden-form-control">{{ field }}</div>
+                    <div class="category-grid" id="category-grid">
+                        {% for choice_value, choice_label in field.field.choices %}
+                            {% if choice_value %}
+                                <div class="category-tile" data-value="{{ choice_value }}">
+                                    <i class="bi bi-tag-fill category-icon"></i>
+                                    <span class="category-label">{{ choice_label }}</span>
+                                    <i class="bi bi-check-circle-fill category-check"></i>
+                                </div>
                             {% endif %}
-                            {% for error in field.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="category-selected-label" id="category-selected-label">No category selected</div>
+                    {% for error in field.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endwith %}
+
+            {% for field in form %}
+                {% if field.html_name == "priority" or field.html_name == "title" or field.html_name == "description" %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             {% endfor %}
         </div>
 
-        <div class="form-section">
+        <div class="wizard-panel" data-step-panel hidden>
             <div class="form-section-heading">
-                <span>Respondent / Other Party Information</span>
+                <span>Location, Contact & Evidence</span>
+            </div>
+            <p class="form-text mb-3">Add where and when it happened, plus how staff can reach you.</p>
+
+            {% for field in form %}
+                {% if field.html_name == "incident_location" or field.html_name == "incident_date" %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% elif field.html_name == "contact_number" %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">
+                            <i class="bi bi-telephone-fill me-1 icon-text-primary"></i>{{ field.label }}
+                        </label>
+                        <div class="contact-input-wrap">
+                            <span class="contact-input-prefix"><i class="bi bi-telephone"></i></span>
+                            {{ field }}
+                        </div>
+                        <div class="form-text">
+                            Provide a number where barangay staff can reach you about this complaint.
+                            {% if field.value %}Pre-filled from your profile. Update if needed.{% endif %}
+                        </div>
+                        {% for error in field.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% elif field.html_name == "evidence" %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="wizard-panel" data-step-panel hidden>
+            <div class="form-section-heading">
+                <span>Respondent / Other Party</span>
             </div>
             <p class="form-text mb-3">
                 Provide any details you know about the person involved. If you do not know some information,
@@ -133,9 +200,9 @@
             {% endfor %}
         </div>
 
-        <div class="form-section">
+        <div class="wizard-panel" data-step-panel hidden>
             <div class="form-section-heading">
-                <span>Data Privacy & Submission Acknowledgement</span>
+                <span>Data Privacy & Submission</span>
             </div>
             <p class="form-text mb-3">
                 Please read and check each acknowledgement before submitting your complaint.
@@ -156,7 +223,13 @@
         </div>
 
         <div class="form-action-bar">
-            <button class="btn btn-primary" type="submit">
+            <button class="btn btn-outline-secondary" type="button" data-wizard-prev hidden>
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </button>
+            <button class="btn btn-primary" type="button" data-wizard-next>
+                Proceed<i class="bi bi-arrow-right ms-1"></i>
+            </button>
+            <button class="btn btn-primary" type="submit" data-wizard-submit hidden>
                 <i class="bi bi-send-fill me-1"></i>Submit Complaint
             </button>
             <a class="btn btn-outline-secondary" href="{% url 'complaints:list' %}">Cancel</a>

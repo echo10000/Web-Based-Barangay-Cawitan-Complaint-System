@@ -6,6 +6,7 @@ from accounts.models import User
 from .models import (
     Complaint,
     ComplaintCategory,
+    ComplaintReply,
     ComplaintResponse,
     Escalation,
     HearingMediation,
@@ -13,6 +14,44 @@ from .models import (
     RespondentEvidence,
     UploadedEvidence,
 )
+
+
+ALLOWED_EVIDENCE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx"}
+MAX_EVIDENCE_FILE_SIZE = 5 * 1024 * 1024
+MAX_EVIDENCE_FILES = 5
+PUROK_LOCATION_CHOICES = [
+    ("", "Select incident location"),
+    ("Purok 1-A", "Purok 1-A"),
+    ("Purok 1-B", "Purok 1-B"),
+    ("Purok 2", "Purok 2"),
+    ("Purok 3", "Purok 3"),
+    ("Purok 4", "Purok 4"),
+    ("Purok 5", "Purok 5"),
+    ("Purok 6", "Purok 6"),
+    ("Purok 7", "Purok 7"),
+]
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    def clean(self, data, initial=None):
+        files = data if isinstance(data, (list, tuple)) else [data] if data else []
+        cleaned_files = []
+        for file in files:
+            cleaned_files.append(super().clean(file, initial))
+        return cleaned_files
+
+
+def validate_evidence_file(file):
+    name = file.name.lower()
+    extension = "." + name.rsplit(".", 1)[-1] if "." in name else ""
+    if extension not in ALLOWED_EVIDENCE_EXTENSIONS:
+        raise forms.ValidationError("Allowed file types: JPG, PNG, GIF, PDF, DOC, and DOCX.")
+    if file.size > MAX_EVIDENCE_FILE_SIZE:
+        raise forms.ValidationError("Each evidence file must be 5 MB or smaller.")
 
 
 ACTIVE_ASSIGNMENT_STATUSES = [
@@ -115,10 +154,10 @@ class ComplaintForm(forms.ModelForm):
         required=False,
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Optional"}),
     )
-    evidence = forms.FileField(
+    evidence = MultipleFileField(
         required=False,
-        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
-        help_text="Optional: upload an image or supporting document.",
+        widget=MultipleFileInput(attrs={"class": "form-control", "multiple": True}),
+        help_text="Optional: upload up to 5 images or supporting documents. Each file must be 5 MB or smaller.",
     )
 
     class Meta:
@@ -148,7 +187,7 @@ class ComplaintForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 5}),
             "contact_number": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. 09XX XXX XXXX"}),
-            "incident_location": forms.TextInput(attrs={"class": "form-control"}),
+            "incident_location": forms.Select(attrs={"class": "form-select"}, choices=PUROK_LOCATION_CHOICES),
             "incident_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
         }
 
@@ -166,6 +205,14 @@ class ComplaintForm(forms.ModelForm):
 
     def clean_respondent_full_name(self):
         return self.cleaned_data["respondent_full_name"].strip() or "Unknown"
+
+    def clean_evidence(self):
+        files = self.cleaned_data.get("evidence") or []
+        if len(files) > MAX_EVIDENCE_FILES:
+            raise forms.ValidationError(f"You can upload up to {MAX_EVIDENCE_FILES} evidence files.")
+        for file in files:
+            validate_evidence_file(file)
+        return files
 
 
 class ComplaintUpdateForm(forms.ModelForm):
@@ -303,6 +350,57 @@ class RespondentResponseForm(forms.ModelForm):
         fields = ["remarks"]
         widgets = {"remarks": forms.Textarea(attrs={"class": "form-control", "rows": 4})}
 
+    def clean_evidence(self):
+        file = self.cleaned_data.get("evidence")
+        if file:
+            validate_evidence_file(file)
+        return file
+
+
+class ComplaintReplyForm(forms.ModelForm):
+    class Meta:
+        model = ComplaintReply
+        fields = ["message", "attachment"]
+        widgets = {
+            "message": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Add a follow-up, clarification, or update.",
+                }
+            ),
+            "attachment": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+    def clean_attachment(self):
+        file = self.cleaned_data.get("attachment")
+        if file:
+            validate_evidence_file(file)
+        return file
+
+
+class ComplaintCategoryForm(forms.ModelForm):
+    class Meta:
+        model = ComplaintCategory
+        fields = [
+            "name",
+            "description",
+            "default_priority",
+            "target_resolution_hours",
+            "responsible_department",
+            "color",
+            "is_active",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "default_priority": forms.Select(attrs={"class": "form-select"}),
+            "target_resolution_hours": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
+            "responsible_department": forms.TextInput(attrs={"class": "form-control"}),
+            "color": forms.TextInput(attrs={"class": "form-control", "placeholder": "#2563eb"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
 
 class HearingMediationForm(forms.ModelForm):
     class Meta:
@@ -343,7 +441,9 @@ class SecondNoticeForm(forms.ModelForm):
         widgets = {
             "second_notice_sent": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "second_notice_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-            "second_notice_method": forms.TextInput(attrs={"class": "form-control", "placeholder": "SMS, letter, personal notice, etc."}),
+            "second_notice_method": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Letter, personal notice, email, etc."}
+            ),
             "second_notice_remarks": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 
@@ -363,15 +463,32 @@ class EscalationForm(forms.ModelForm):
 class EvidenceForm(forms.ModelForm):
     class Meta:
         model = UploadedEvidence
-        fields = ["file"]
-        widgets = {"file": forms.ClearableFileInput(attrs={"class": "form-control"})}
+        fields = ["file", "evidence_type", "description"]
+        widgets = {
+            "file": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "evidence_type": forms.Select(attrs={"class": "form-select"}),
+            "description": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+    def clean_file(self):
+        file = self.cleaned_data.get("file")
+        if file:
+            validate_evidence_file(file)
+        return file
 
 
 class RespondentEvidenceForm(forms.ModelForm):
     class Meta:
         model = RespondentEvidence
-        fields = ["file", "remarks"]
+        fields = ["file", "evidence_type", "remarks"]
         widgets = {
             "file": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "evidence_type": forms.Select(attrs={"class": "form-select"}),
             "remarks": forms.TextInput(attrs={"class": "form-control"}),
         }
+
+    def clean_file(self):
+        file = self.cleaned_data.get("file")
+        if file:
+            validate_evidence_file(file)
+        return file

@@ -1,8 +1,3 @@
-import json
-from urllib import request as urlrequest
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import Count, Q
@@ -10,16 +5,6 @@ from django.utils import timezone
 
 from accounts.models import User
 from .models import Complaint, Notification
-
-
-SMS_TYPE_LABELS = {
-    Notification.Type.GENERAL: "Notification",
-    Notification.Type.SUBMITTED: "Complaint submitted",
-    Notification.Type.ASSIGNED: "Complaint assigned",
-    Notification.Type.STATUS_CHANGED: "Status changed",
-    Notification.Type.REMARKS_ADDED: "Remarks added",
-    Notification.Type.OVERDUE: "Overdue complaint",
-}
 
 
 ACTIVE_ASSIGNMENT_STATUSES = [
@@ -103,24 +88,6 @@ def choose_auto_assignee(complaint):
     return options[0]["user"] if options else None
 
 
-def get_user_phone_number(user):
-    for attr in ("resident_profile", "staff_profile"):
-        try:
-            profile = getattr(user, attr)
-        except Exception:
-            profile = None
-        phone_number = getattr(profile, "phone_number", "")
-        if phone_number:
-            return phone_number
-    return ""
-
-
-def format_sms_message(notification):
-    label = SMS_TYPE_LABELS.get(notification.notification_type, "Notification")
-    complaint_ref = f" Complaint #{notification.complaint_id}." if notification.complaint_id else ""
-    return f"Barangay Cawitan: {label}.{complaint_ref} {notification.message}".strip()
-
-
 def create_notification(
     *,
     user,
@@ -130,7 +97,6 @@ def create_notification(
     notification_type=Notification.Type.GENERAL,
     link_target="",
     send_email=True,
-    send_sms=True,
     dedupe=False,
 ):
     if not link_target and complaint:
@@ -157,23 +123,17 @@ def create_notification(
             **defaults,
         )
 
-    deliver_notification(notification, send_email=send_email, send_sms=send_sms)
+    deliver_notification(notification, send_email=send_email)
     return notification
 
 
-def deliver_notification(notification, *, send_email=True, send_sms=True):
+def deliver_notification(notification, *, send_email=True):
     update_fields = []
     if send_email:
         deliver_notification_email(notification, update_fields)
     else:
         notification.email_status = Notification.DeliveryStatus.SKIPPED
         update_fields.append("email_status")
-
-    if send_sms:
-        deliver_notification_sms(notification, update_fields)
-    else:
-        notification.sms_status = Notification.DeliveryStatus.SKIPPED
-        update_fields.append("sms_status")
 
     if update_fields:
         notification.save(update_fields=update_fields)
@@ -209,64 +169,3 @@ def deliver_notification_email(notification, update_fields):
         notification.email_sent_at = timezone.now()
         notification.email_error = ""
         update_fields.extend(["email_status", "email_sent_at", "email_error"])
-
-
-def deliver_notification_sms(notification, update_fields):
-    phone_number = get_user_phone_number(notification.user)
-    if not phone_number:
-        notification.sms_status = Notification.DeliveryStatus.SKIPPED
-        update_fields.append("sms_status")
-        return
-
-    sms_message = format_sms_message(notification)
-    sms_webhook_url = getattr(settings, "SMS_WEBHOOK_URL", "")
-    semaphore_api_key = getattr(settings, "SEMAPHORE_API_KEY", "")
-    if sms_webhook_url:
-        payload = json.dumps(
-            {
-                "to": phone_number,
-                "message": sms_message,
-                "notification_id": notification.id,
-                "notification_type": notification.notification_type,
-            }
-        ).encode("utf-8")
-        sms_request = urlrequest.Request(
-            sms_webhook_url,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-    elif semaphore_api_key:
-        payload = urlencode(
-            {
-                "apikey": semaphore_api_key,
-                "number": phone_number,
-                "message": sms_message,
-                "sendername": getattr(settings, "SEMAPHORE_SENDER_NAME", "SEMAPHORE"),
-            }
-        ).encode("utf-8")
-        sms_request = urlrequest.Request(
-            getattr(settings, "SEMAPHORE_API_URL", "https://api.semaphore.co/api/v4/messages"),
-            data=payload,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            method="POST",
-        )
-    else:
-        notification.sms_status = Notification.DeliveryStatus.NOT_CONFIGURED
-        notification.sms_error = "SMS_WEBHOOK_URL or SEMAPHORE_API_KEY is not configured."
-        update_fields.extend(["sms_status", "sms_error"])
-        return
-
-    try:
-        with urlrequest.urlopen(sms_request, timeout=10) as response:
-            if response.status >= 400:
-                raise HTTPError(sms_request.full_url, response.status, response.reason, response.headers, None)
-    except (HTTPError, URLError, TimeoutError, OSError) as exc:
-        notification.sms_status = Notification.DeliveryStatus.FAILED
-        notification.sms_error = str(exc)
-        update_fields.extend(["sms_status", "sms_error"])
-    else:
-        notification.sms_status = Notification.DeliveryStatus.SENT
-        notification.sms_sent_at = timezone.now()
-        notification.sms_error = ""
-        update_fields.extend(["sms_status", "sms_sent_at", "sms_error"])

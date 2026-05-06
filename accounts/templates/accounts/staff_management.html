@@ -70,7 +70,7 @@
             <p class="entity-card-subtitle">{{ filtered_count }} staff account{{ filtered_count|pluralize }}{% if search_query %} matching "{{ search_query }}"{% endif %}</p>
         </div>
     </div>
-    <div class="table-responsive">
+    <div class="table-responsive" x-data="{ open: null }" @keydown.escape.window="open = null">
         <table class="table align-middle entity-table account-directory-table">
             <thead>
                 <tr>
@@ -85,7 +85,7 @@
             </thead>
             <tbody>
                 {% for person in staff %}
-                    <tr>
+                    <tr class="hover:!bg-gray-50">
                         <td data-label="Name">
                             <div class="person-cell">
                                 <span class="person-avatar">{{ person.first_name|default:person.username|first|upper }}</span>
@@ -113,26 +113,42 @@
                             {% endif %}
                         </td>
                         <td data-label="Actions">
-                            <div class="btn-group btn-group-sm account-action-group" role="group" aria-label="Staff account actions">
-                                <a class="btn btn-outline-primary" href="{% url 'accounts:edit_account' person.pk %}" title="Edit account">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
-                                <form method="post" action="{% url 'accounts:toggle_account_status' person.pk %}">
-                                    {% csrf_token %}
-                                    <button class="btn btn-outline-warning" type="submit" title="{% if person.is_active %}Deactivate login{% else %}Activate login{% endif %}">
-                                        {% if person.is_active %}
-                                            <i class="bi bi-person-dash"></i>
-                                        {% else %}
-                                            <i class="bi bi-person-check"></i>
-                                        {% endif %}
-                                    </button>
-                                </form>
-                                <form method="post" action="{% url 'accounts:reset_account_password' person.pk %}">
-                                    {% csrf_token %}
-                                    <button class="btn btn-outline-secondary" type="submit" title="Email temporary password">
-                                        <i class="bi bi-key"></i>
-                                    </button>
-                                </form>
+                            <div class="!relative !inline-flex !justify-end" @click.outside="if (open === 'staff-{{ person.pk }}') open = null">
+                                <button type="button"
+                                        class="!inline-flex !h-9 !w-9 !items-center !justify-center !rounded-lg !border !border-gray-200 !bg-white !text-gray-600 !shadow-sm !transition hover:!border-blue-300 hover:!bg-blue-50 hover:!text-blue-700"
+                                        @click="open = open === 'staff-{{ person.pk }}' ? null : 'staff-{{ person.pk }}'"
+                                        :aria-expanded="open === 'staff-{{ person.pk }}'"
+                                        aria-label="Open staff actions">
+                                    <span class="!text-xl !leading-none">⋮</span>
+                                </button>
+                                <div x-cloak
+                                     x-show="open === 'staff-{{ person.pk }}'"
+                                     x-transition:enter="!transition !ease-out !duration-150"
+                                     x-transition:enter-start="!opacity-0 !-translate-y-1"
+                                     x-transition:enter-end="!opacity-100 !translate-y-0"
+                                     x-transition:leave="!transition !ease-in !duration-100"
+                                     x-transition:leave-start="!opacity-100 !translate-y-0"
+                                     x-transition:leave-end="!opacity-0 !-translate-y-1"
+                                     class="!absolute !right-0 !top-10 !z-50 !min-w-[190px] !overflow-hidden !rounded-lg !border !border-gray-200 !bg-white !py-1 !text-sm !shadow-xl">
+                                    <a href="{% url 'accounts:edit_account' person.pk %}" class="!flex !items-center !gap-2 !px-3 !py-2 !text-gray-700 !no-underline hover:!bg-gray-100 hover:!text-gray-900">
+                                        <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/></svg>
+                                        <span>Edit Staff</span>
+                                    </a>
+                                    <form method="post" action="{% url 'accounts:reset_account_password' person.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-gray-700 hover:!bg-gray-100 hover:!text-gray-900">
+                                            <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.03 5.91l-1.48 1.48H10.5v2.25H8.25v2.25H4.5v-3.75l6.34-6.34A6 6 0 1 1 21.75 8.25Z"/></svg>
+                                            <span>Reset Password</span>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'accounts:toggle_account_status' person.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-red-500 hover:!bg-red-50">
+                                            <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                            <span>{% if person.is_active %}Deactivate{% else %}Activate{% endif %}</span>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </td>
                     </tr>

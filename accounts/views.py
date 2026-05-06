@@ -1,7 +1,8 @@
 import random
 
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.core.mail import send_mail
@@ -9,6 +10,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.conf import settings
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 
 from .forms import (
@@ -16,6 +18,7 @@ from .forms import (
     LoginForm,
     ResidentProfileForm,
     ResidentRegistrationForm,
+    ResidentVerificationForm,
     StaffAccountForm,
     StaffProfileForm,
     UserProfileForm,
@@ -25,6 +28,8 @@ from .models import PasswordResetOTP, ResidentProfile, StaffProfile, User
 
 PASSWORD_RESET_USER_SESSION_KEY = "password_reset_user_id"
 PASSWORD_RESET_VERIFIED_SESSION_KEY = "password_reset_verified_user_id"
+OTP_RESEND_COOLDOWN_SECONDS = 60
+OTP_MAX_ATTEMPTS = 5
 
 
 def _generate_otp():
@@ -32,9 +37,16 @@ def _generate_otp():
 
 
 def _create_and_send_password_reset_otp(user):
+    latest_otp = PasswordResetOTP.objects.filter(user=user, is_used=False).first()
+    if latest_otp and latest_otp.last_sent_at:
+        seconds_since_last_send = (timezone.now() - latest_otp.last_sent_at).total_seconds()
+        if seconds_since_last_send < OTP_RESEND_COOLDOWN_SECONDS:
+            wait_seconds = int(OTP_RESEND_COOLDOWN_SECONDS - seconds_since_last_send)
+            raise ValueError(f"Please wait {wait_seconds} seconds before requesting another OTP.")
+
     PasswordResetOTP.objects.filter(user=user, is_used=False).update(is_used=True)
     otp = _generate_otp()
-    PasswordResetOTP.objects.create(user=user, otp=otp)
+    PasswordResetOTP.objects.create(user=user, otp="", otp_hash=make_password(otp), last_sent_at=timezone.now())
     send_mail(
         "Barangay Cawitan - Password Reset OTP",
         f"Your OTP is: {otp}. It expires in 10 minutes. Do not share this.",
@@ -76,6 +88,12 @@ class RoleAwareLoginView(LoginView):
 login_view = RoleAwareLoginView.as_view()
 
 
+def logout_view(request):
+    logout(request)
+    messages.success(request, "You have been logged out successfully.")
+    return redirect("accounts:login")
+
+
 def register_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard:home")
@@ -102,6 +120,9 @@ def forgot_password_view(request):
 
         try:
             _create_and_send_password_reset_otp(user)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("accounts:forgot_password")
         except Exception:
             messages.error(request, "Unable to send OTP right now. Please try again later.")
             return redirect("accounts:forgot_password")
@@ -128,6 +149,9 @@ def verify_otp_view(request):
     if request.method == "GET" and request.GET.get("resend") == "1":
         try:
             _create_and_send_password_reset_otp(user)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("accounts:verify_otp")
         except Exception:
             messages.error(request, "Unable to resend OTP right now. Please try again later.")
             return redirect("accounts:verify_otp")
@@ -137,7 +161,7 @@ def verify_otp_view(request):
 
     if request.method == "POST":
         otp = request.POST.get("otp", "").strip()
-        otp_record = PasswordResetOTP.objects.filter(user=user, otp=otp, is_used=False).first()
+        otp_record = PasswordResetOTP.objects.filter(user=user, is_used=False).first()
 
         if not otp_record:
             messages.error(request, "Invalid OTP. Please try again.")
@@ -145,6 +169,19 @@ def verify_otp_view(request):
 
         if otp_record.is_expired():
             messages.error(request, "OTP has expired. Please request a new one.")
+            return redirect("accounts:verify_otp")
+
+        if otp_record.failed_attempts >= OTP_MAX_ATTEMPTS:
+            otp_record.is_used = True
+            otp_record.save(update_fields=["is_used"])
+            messages.error(request, "Too many invalid attempts. Please request a new OTP.")
+            return redirect("accounts:forgot_password")
+
+        otp_matches = check_password(otp, otp_record.otp_hash) if otp_record.otp_hash else otp_record.otp == otp
+        if not otp_matches:
+            otp_record.failed_attempts += 1
+            otp_record.save(update_fields=["failed_attempts"])
+            messages.error(request, "Invalid OTP. Please try again.")
             return redirect("accounts:verify_otp")
 
         otp_record.is_used = True
@@ -192,7 +229,7 @@ def profile_view(request):
 
     if request.user.is_resident:
         profile, _ = ResidentProfile.objects.get_or_create(user=request.user, defaults={"address": ""})
-        profile_form = ResidentProfileForm(request.POST or None, instance=profile)
+        profile_form = ResidentProfileForm(request.POST or None, request.FILES or None, instance=profile)
     elif request.user.is_staff_member:
         profile, _ = StaffProfile.objects.get_or_create(user=request.user)
         profile_form = StaffProfileForm(request.POST or None, instance=profile)
@@ -225,16 +262,27 @@ def edit_account_view(request, pk):
     user_form = AdminAccountForm(request.POST or None, instance=account)
     if account.role == User.Role.RESIDENT:
         profile, _ = ResidentProfile.objects.get_or_create(user=account, defaults={"address": ""})
-        profile_form = ResidentProfileForm(request.POST or None, instance=profile)
+        profile_form = ResidentProfileForm(request.POST or None, request.FILES or None, instance=profile)
+        verification_data = request.POST if "verify-verification_status" in request.POST else None
+        verification_form = ResidentVerificationForm(verification_data, instance=profile, prefix="verify")
         account_type = "Resident"
     else:
         profile, _ = StaffProfile.objects.get_or_create(user=account)
         profile_form = StaffProfileForm(request.POST or None, instance=profile)
+        verification_form = None
         account_type = "Staff"
 
-    if request.method == "POST" and user_form.is_valid() and profile_form.is_valid():
+    verification_valid = verification_form is None or not verification_form.is_bound or verification_form.is_valid()
+    if request.method == "POST" and user_form.is_valid() and profile_form.is_valid() and verification_valid:
         user_form.save()
         profile_form.save()
+        if verification_form and verification_form.is_bound:
+            resident_profile = verification_form.save(commit=False)
+            if "verification_status" in verification_form.changed_data:
+                is_verified = resident_profile.verification_status == ResidentProfile.VerificationStatus.VERIFIED
+                resident_profile.verified_at = timezone.now() if is_verified else None
+                resident_profile.verified_by = request.user if is_verified else None
+            resident_profile.save()
         messages.success(request, f"{account_type} account updated successfully.")
         return redirect(_account_list_url(account))
 
@@ -246,6 +294,7 @@ def edit_account_view(request, pk):
             "account_type": account_type,
             "user_form": user_form,
             "profile_form": profile_form,
+            "verification_form": verification_form,
         },
     )
 
@@ -298,6 +347,21 @@ def reset_account_password_view(request, pk):
 
 @login_required
 @admin_required
+def verify_resident_view(request, pk):
+    if request.method != "POST":
+        return redirect("accounts:residents")
+    account = get_object_or_404(User, pk=pk, role=User.Role.RESIDENT)
+    profile, _ = ResidentProfile.objects.get_or_create(user=account, defaults={"address": ""})
+    profile.verification_status = ResidentProfile.VerificationStatus.VERIFIED
+    profile.verified_at = timezone.now()
+    profile.verified_by = request.user
+    profile.save(update_fields=["verification_status", "verified_at", "verified_by"])
+    messages.success(request, f"{account.get_full_name() or account.username} has been verified.")
+    return redirect("accounts:residents")
+
+
+@login_required
+@admin_required
 def resident_management_view(request):
     residents = User.objects.filter(role=User.Role.RESIDENT).select_related("resident_profile").order_by("last_name")
     search = request.GET.get("q", "").strip()
@@ -308,6 +372,9 @@ def resident_management_view(request):
         | Q(last_name="")
         | Q(resident_profile__phone_number="")
         | Q(resident_profile__address="")
+    ).count()
+    verified_residents = residents.filter(
+        resident_profile__verification_status=ResidentProfile.VerificationStatus.VERIFIED
     ).count()
     if search:
         residents = residents.filter(
@@ -328,6 +395,7 @@ def resident_management_view(request):
             "filtered_count": residents.count(),
             "complete_profiles": complete_profiles,
             "incomplete_profiles": total_residents - complete_profiles,
+            "verified_residents": verified_residents,
         },
     )
 

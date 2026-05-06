@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Help Center | Barangay Cawitan{% endblock %}
+{% block content %}
+
+<div class="help-center-page">
+    <div class="help-hero">
+        <div>
+            <p class="welcome-eyebrow">
+                <i class="bi bi-question-circle-fill me-1"></i>Resident Help Center
+            </p>
+            <h2 class="welcome-heading">How can we help you today?</h2>
+            <p class="welcome-sub">Find filing guidance, complaint categories, office contact details, and answers to common questions.</p>
+        </div>
+        <div class="help-hero-actions">
+            <a class="btn btn-success" href="{% url 'complaints:submit' %}">
+                <i class="bi bi-plus-circle-fill me-1"></i>Submit Complaint
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'complaints:list' %}">
+                <i class="bi bi-clipboard2-data-fill me-1"></i>My Complaints
+            </a>
+        </div>
+    </div>
+
+    <div class="help-quick-grid">
+        <a class="help-action-card" href="tel:+6334XXXXXXX">
+            <span class="help-action-icon"><i class="bi bi-telephone-fill"></i></span>
+            <strong>Call Office</strong>
+            <small>(034) XXX-XXXX</small>
+        </a>
+        <a class="help-action-card" href="mailto:barangay@cawitan.gov.ph">
+            <span class="help-action-icon"><i class="bi bi-envelope-fill"></i></span>
+            <strong>Email Barangay</strong>
+            <small>barangay@cawitan.gov.ph</small>
+        </a>
+        <a class="help-action-card" href="https://www.google.com/maps/search/?api=1&query=Barangay%20Cawitan%20Hall%20Kabankalan%20City" target="_blank" rel="noopener">
+            <span class="help-action-icon"><i class="bi bi-geo-alt-fill"></i></span>
+            <strong>Get Directions</strong>
+            <small>Barangay Cawitan Hall</small>
+        </a>
+        <div class="help-action-card help-action-card--status">
+            <span class="help-action-icon"><i class="bi bi-clock-fill"></i></span>
+            <strong>{% if is_open_now %}Open Now{% else %}Closed Now{% endif %}</strong>
+            <small>Mon - Fri, 8:00 AM - 5:00 PM</small>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-xl-8">
+            <div class="content-card help-section-card">
+                <div class="entity-card-header help-section-header">
+                    <div>
+                        <p class="entity-card-title">Complaint Categories</p>
+                        <p class="entity-card-subtitle">Choose the closest category when filing so staff can route your concern faster.</p>
+                    </div>
+                </div>
+                <div class="help-category-grid">
+                    {% for category in categories %}
+                        <div class="help-category-card">
+                            <div class="help-category-top">
+                                <span class="help-category-icon"><i class="bi bi-folder-fill"></i></span>
+                                <span class="help-priority help-priority--{{ category.default_priority|lower }}">
+                                    {% if category.get_default_priority_display %}
+                                        {{ category.get_default_priority_display }}
+                                    {% else %}
+                                        {{ category.default_priority|title }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <h3>{{ category.name }}</h3>
+                            <p>{{ category.description|default:"Use this category when your concern fits this area." }}</p>
+                            <div class="help-category-meta">
+                                <span><i class="bi bi-hourglass-split me-1"></i>{{ category.target_resolution_hours }}h target</span>
+                                {% if category.responsible_department %}
+                                    <span><i class="bi bi-building-fill me-1"></i>{{ category.responsible_department }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="content-card help-section-card mt-4">
+                <div class="entity-card-header help-section-header">
+                    <div>
+                        <p class="entity-card-title">Frequently Asked Questions</p>
+                        <p class="entity-card-subtitle">Quick answers for the most common resident questions.</p>
+                    </div>
+                </div>
+                <div class="help-faq-list">
+                    <details open>
+                        <summary>How do I file a complaint?</summary>
+                        <p>Click Submit Complaint, fill in the details, add the incident location and date, then submit the form for barangay review.</p>
+                    </details>
+                    <details>
+                        <summary>What happens after I submit?</summary>
+                        <p>Your complaint is marked Pending Review. Barangay staff will review it, update the status, and send notifications through your account.</p>
+                    </details>
+                    <details>
+                        <summary>How long does processing take?</summary>
+                        <p>The target response time depends on priority. Urgent concerns are handled faster, while normal complaints are typically reviewed within the listed category target.</p>
+                    </details>
+                    <details>
+                        <summary>Can I update my complaint?</summary>
+                        <p>You can check your complaint record from My Complaints. If more information is needed, contact the office or wait for staff instructions.</p>
+                    </details>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="content-card help-contact-panel">
+                <div class="section-title">
+                    <i class="bi bi-headset me-1"></i>Contact Barangay
+                </div>
+                <p class="help-intro">Use these channels for follow-ups, assistance, or urgent clarification about a submitted complaint.</p>
+                <ul class="help-contact-list">
+                    <li class="help-contact-item">
+                        <span class="help-contact-icon-wrap"><i class="bi bi-telephone-fill"></i></span>
+                        <div>
+                            <div class="help-contact-label">Phone</div>
+                            <a class="help-contact-value" href="tel:+6334XXXXXXX">(034) XXX-XXXX</a>
+                        </div>
+                    </li>
+                    <li class="help-contact-item">
+                        <span class="help-contact-icon-wrap"><i class="bi bi-envelope-fill"></i></span>
+                        <div>
+                            <div class="help-contact-label">Email</div>
+                            <a class="help-contact-value" href="mailto:barangay@cawitan.gov.ph">barangay@cawitan.gov.ph</a>
+                        </div>
+                    </li>
+                    <li class="help-contact-item">
+                        <span class="help-contact-icon-wrap"><i class="bi bi-geo-alt-fill"></i></span>
+                        <div>
+                            <div class="help-contact-label">Address</div>
+                            <div class="help-contact-value">Barangay Cawitan Hall, Kabankalan City, Negros Occidental</div>
+                        </div>
+                    </li>
+                    <li class="help-contact-item">
+                        <span class="help-contact-icon-wrap"><i class="bi bi-clock-fill"></i></span>
+                        <div>
+                            <div class="help-contact-label">Office Hours</div>
+                            <div class="help-contact-value">Mon - Fri &middot; 8:00 AM - 5:00 PM</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="help-urgent-box mt-4">
+                <div class="help-urgent-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div>
+                    <strong>Need urgent help?</strong>
+                    <p>For emergencies or immediate safety concerns, contact the barangay office directly or call local emergency responders right away.</p>
+                </div>
+            </div>
+
+            <div class="content-card help-feedback-card mt-4">
+                <div class="section-title">
+                    <i class="bi bi-chat-square-heart-fill me-1"></i>Was this helpful?
+                </div>
+                <div class="help-feedback-actions">
+                    <button type="button" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-hand-thumbs-up-fill me-1"></i>Yes
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-hand-thumbs-down-fill me-1"></i>No
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

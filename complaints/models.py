@@ -9,6 +9,14 @@ from django.utils import timezone
 class ComplaintCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    default_priority = models.CharField(
+        max_length=20,
+        choices=[("LOW", "Low"), ("NORMAL", "Normal"), ("HIGH", "High"), ("URGENT", "Urgent")],
+        default="NORMAL",
+    )
+    target_resolution_hours = models.PositiveIntegerField(default=72)
+    responsible_department = models.CharField(max_length=100, blank=True)
+    color = models.CharField(max_length=20, blank=True, help_text="Optional dashboard color such as #2563eb.")
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -151,8 +159,20 @@ class ComplaintStatusHistory(models.Model):
 
 
 class UploadedEvidence(models.Model):
+    class EvidenceType(models.TextChoices):
+        INITIAL = "INITIAL", "Initial Evidence"
+        FOLLOW_UP = "FOLLOW_UP", "Follow-up Evidence"
+        INSPECTION = "INSPECTION", "Inspection Photo"
+        RESOLUTION = "RESOLUTION", "Resolution Proof"
+        OTHER = "OTHER", "Other"
+
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, related_name="evidence_files")
     file = models.FileField(upload_to="complaint_uploads/")
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    evidence_type = models.CharField(max_length=20, choices=EvidenceType.choices, default=EvidenceType.INITIAL)
+    description = models.CharField(max_length=255, blank=True)
+    file_size = models.PositiveIntegerField(default=0)
+    content_type = models.CharField(max_length=100, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -162,7 +182,6 @@ class UploadedEvidence(models.Model):
 class Respondent(models.Model):
     class ContactMethod(models.TextChoices):
         CALL = "CALL", "Call"
-        SMS = "SMS", "SMS"
         LETTER = "LETTER", "Letter"
         EMAIL = "EMAIL", "Email"
         PERSONAL_NOTICE = "PERSONAL_NOTICE", "Personal Notice"
@@ -223,14 +242,39 @@ class ComplaintResponse(models.Model):
 
 
 class RespondentEvidence(models.Model):
+    class EvidenceType(models.TextChoices):
+        RESPONDENT = "RESPONDENT", "Respondent Evidence"
+        RESPONSE = "RESPONSE", "Response Attachment"
+        OTHER = "OTHER", "Other"
+
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, related_name="respondent_evidence_files")
     file = models.FileField(upload_to="respondent_uploads/")
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    evidence_type = models.CharField(max_length=20, choices=EvidenceType.choices, default=EvidenceType.RESPONDENT)
     remarks = models.CharField(max_length=255, blank=True)
+    file_size = models.PositiveIntegerField(default=0)
+    content_type = models.CharField(max_length=100, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Respondent evidence for {self.complaint.title}"
+
+
+class ComplaintReply(models.Model):
+    complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, related_name="replies")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    message = models.TextField()
+    attachment = models.FileField(upload_to="complaint_replies/", null=True, blank=True)
+    attachment_size = models.PositiveIntegerField(default=0)
+    attachment_content_type = models.CharField(max_length=100, blank=True)
+    is_public = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Reply for {self.complaint.title}"
 
 
 class HearingMediation(models.Model):
@@ -308,9 +352,6 @@ class Notification(models.Model):
     email_status = models.CharField(max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.PENDING)
     email_sent_at = models.DateTimeField(null=True, blank=True)
     email_error = models.TextField(blank=True)
-    sms_status = models.CharField(max_length=20, choices=DeliveryStatus.choices, default=DeliveryStatus.PENDING)
-    sms_sent_at = models.DateTimeField(null=True, blank=True)
-    sms_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

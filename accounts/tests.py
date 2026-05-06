@@ -43,6 +43,15 @@ class LoginFormTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(get_user(self.client).id, self.user.id)
 
+    def test_logout_redirects_to_login_with_feedback(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("accounts:logout"), follow=True)
+
+        self.assertRedirects(response, reverse("accounts:login"))
+        self.assertFalse(get_user(self.client).is_authenticated)
+        self.assertContains(response, "You have been logged out successfully.")
+
 
 class AdminAccountActionTests(TestCase):
     def setUp(self):

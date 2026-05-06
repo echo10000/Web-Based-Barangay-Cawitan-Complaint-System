@@ -9,7 +9,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from accounts.models import StaffProfile, User
-from complaints.models import Complaint, Notification
+from complaints.models import Complaint, ComplaintCategory, Notification
 from complaints.services import create_notification
 
 
@@ -87,6 +87,58 @@ def resident_dashboard_view(request):
             "recent_complaints": complaints[:5],
             "notifications": notifications,
             "profile_completion": profile_completion,
+        },
+    )
+
+
+@login_required
+def resident_help_view(request):
+    if not request.user.is_resident:
+        messages.error(request, "Residents only.")
+        return redirect("dashboard:home")
+
+    categories = ComplaintCategory.objects.filter(is_active=True).order_by("name")
+    if not categories.exists():
+        categories = [
+            {
+                "name": "Noise Complaint",
+                "description": "Loud music, disturbance, or repeated neighborhood noise.",
+                "default_priority": "NORMAL",
+                "target_resolution_hours": 72,
+                "responsible_department": "Barangay Desk",
+            },
+            {
+                "name": "Garbage & Sanitation",
+                "description": "Waste collection, cleanliness, drainage odor, or sanitation concerns.",
+                "default_priority": "NORMAL",
+                "target_resolution_hours": 72,
+                "responsible_department": "Sanitation",
+            },
+            {
+                "name": "Road, Lighting, or Obstruction",
+                "description": "Street lighting, road hazards, blocked pathways, or drainage issues.",
+                "default_priority": "HIGH",
+                "target_resolution_hours": 48,
+                "responsible_department": "Public Works",
+            },
+            {
+                "name": "Safety & Security",
+                "description": "Public safety concerns that need barangay attention.",
+                "default_priority": "URGENT",
+                "target_resolution_hours": 24,
+                "responsible_department": "Barangay Tanod",
+            },
+        ]
+
+    now = timezone.localtime()
+    is_open_now = now.weekday() < 5 and 8 <= now.hour < 17
+
+    return render(
+        request,
+        "dashboard/resident_help.html",
+        {
+            "categories": categories,
+            "is_open_now": is_open_now,
         },
     )
 

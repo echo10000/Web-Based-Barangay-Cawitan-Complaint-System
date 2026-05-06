@@ -226,6 +226,51 @@
                 {% endfor %}
             </div>
         {% endif %}
+
+        <div class="content-card mt-4">
+            <div class="section-title"><i class="bi bi-chat-dots-fill me-1"></i>Follow-up Conversation</div>
+            {% for reply in complaint.replies.all %}
+                <div class="timeline-item">
+                    <strong>
+                        {% if reply.author %}
+                            {{ reply.author.get_full_name|default:reply.author.username }}
+                        {% else %}
+                            Account unavailable
+                        {% endif %}
+                    </strong>
+                    <small>{{ reply.created_at|date:"M d, Y h:i A" }}</small>
+                    <p>{{ reply.message|linebreaks }}</p>
+                    {% if reply.attachment %}
+                        <a class="evidence-link evidence-link--modern" href="{{ reply.attachment.url }}" target="_blank">
+                            <span class="evidence-icon"><i class="bi bi-paperclip"></i></span>
+                            <span>
+                                <strong>{{ reply.attachment.name }}</strong>
+                                <small>Reply attachment</small>
+                            </span>
+                            <i class="bi bi-box-arrow-up-right ms-auto"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p class="entity-muted">No follow-up messages yet.</p>
+            {% endfor %}
+            {% if not complaint.is_closed %}
+                <form method="post" enctype="multipart/form-data" class="mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="workflow_action" value="reply">
+                    {% for field in reply_form %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-send-fill me-1"></i>Add Reply
+                    </button>
+                </form>
+            {% endif %}
+        </div>
     </div>
 
     <div class="col-lg-4 mt-4 mt-lg-0">
@@ -267,7 +312,7 @@
                     <span class="evidence-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                     <span>
                         <strong>{{ evidence.file.name }}</strong>
-                        <small>Complainant file</small>
+                        <small>{{ evidence.get_evidence_type_display }}{% if evidence.description %} - {{ evidence.description }}{% endif %}</small>
                     </span>
                     <i class="bi bi-box-arrow-up-right ms-auto"></i>
                 </a>

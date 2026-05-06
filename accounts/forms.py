@@ -42,6 +42,8 @@ class ResidentRegistrationForm(UserCreationForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={"class": "form-control"}))
     phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     address = forms.CharField(widget=forms.TextInput(attrs={"class": "form-control"}))
+    purok = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    household_number = forms.CharField(max_length=50, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     birth_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
 
     class Meta:
@@ -63,6 +65,8 @@ class ResidentRegistrationForm(UserCreationForm):
                 user=user,
                 phone_number=self.cleaned_data.get("phone_number", ""),
                 address=self.cleaned_data["address"],
+                purok=self.cleaned_data.get("purok", ""),
+                household_number=self.cleaned_data.get("household_number", ""),
                 birth_date=self.cleaned_data.get("birth_date"),
             )
         return user
@@ -95,11 +99,24 @@ class AdminAccountForm(forms.ModelForm):
 class ResidentProfileForm(forms.ModelForm):
     class Meta:
         model = ResidentProfile
-        fields = ["phone_number", "address", "birth_date"]
+        fields = ["phone_number", "address", "purok", "household_number", "birth_date", "valid_id_image"]
         widgets = {
             "phone_number": forms.TextInput(attrs={"class": "form-control"}),
             "address": forms.TextInput(attrs={"class": "form-control"}),
+            "purok": forms.TextInput(attrs={"class": "form-control"}),
+            "household_number": forms.TextInput(attrs={"class": "form-control"}),
             "birth_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "valid_id_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+
+class ResidentVerificationForm(forms.ModelForm):
+    class Meta:
+        model = ResidentProfile
+        fields = ["verification_status", "verification_notes"]
+        widgets = {
+            "verification_status": forms.Select(attrs={"class": "form-select"}),
+            "verification_notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 
 

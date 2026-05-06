@@ -40,7 +40,6 @@
         </div>
         <div class="notif-delivery">
             <span class="delivery-chip delivery-chip--{{ item.email_status|lower }}">Email: {{ item.get_email_status_display }}</span>
-            <span class="delivery-chip delivery-chip--{{ item.sms_status|lower }}">SMS: {{ item.get_sms_status_display }}</span>
         </div>
     </div>
     {% if not item.is_read %}<span class="notif-unread-dot"></span>{% endif %}

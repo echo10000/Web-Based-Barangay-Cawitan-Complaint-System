@@ -86,9 +86,8 @@ class NotificationAdmin(admin.ModelAdmin):
         "complaint",
         "is_read",
         "email_status",
-        "sms_status",
         "created_at",
     )
-    list_filter = ("notification_type", "is_read", "email_status", "sms_status", "created_at")
+    list_filter = ("notification_type", "is_read", "email_status", "created_at")
     search_fields = ("user__username", "user__email", "message", "complaint__title")
-    readonly_fields = ("created_at", "read_at", "email_sent_at", "sms_sent_at")
+    readonly_fields = ("created_at", "read_at", "email_sent_at")

@@ -37,6 +37,14 @@
         <strong>{{ incomplete_profiles }}</strong>
         <p class="stat-card-desc">Missing key contact details</p>
     </div>
+    <div class="stat-card stat-card--emerald">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-shield-check"></i>
+        </div>
+        <span>Verified</span>
+        <strong>{{ verified_residents }}</strong>
+        <p class="stat-card-desc">Identity checked by admin</p>
+    </div>
 </div>
 
 <div class="content-card entity-toolbar-card account-toolbar-card mb-3">
@@ -70,7 +78,7 @@
             <p class="entity-card-subtitle">{{ filtered_count }} resident account{{ filtered_count|pluralize }}{% if search_query %} matching "{{ search_query }}"{% endif %}</p>
         </div>
     </div>
-    <div class="table-responsive">
+    <div class="table-responsive" x-data="{ open: null, confirmDeactivate: null }" @keydown.escape.window="open = null; confirmDeactivate = null">
         <table class="table align-middle entity-table account-directory-table">
             <thead>
                 <tr>
@@ -79,13 +87,14 @@
                     <th>Email</th>
                     <th>Phone</th>
                     <th>Address</th>
+                    <th>Verification</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for resident in residents %}
-                    <tr>
+                    <tr class="hover:!bg-gray-50">
                         <td data-label="Name">
                             <div class="person-cell">
                                 <span class="person-avatar">{{ resident.first_name|default:resident.username|first|upper }}</span>
@@ -105,6 +114,19 @@
                             {% endif %}
                         </td>
                         <td data-label="Address">{{ resident.resident_profile.address|default:"-" }}</td>
+                        <td data-label="Verification">
+                            {% with status=resident.resident_profile.verification_status %}
+                                {% if status == "VERIFIED" %}
+                                    <span class="badge bg-success-subtle text-success">Verified</span>
+                                {% elif status == "PENDING" %}
+                                    <span class="badge bg-warning-subtle text-warning">Pending</span>
+                                {% elif status == "REJECTED" %}
+                                    <span class="badge bg-danger-subtle text-danger">Rejected</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Unverified</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
                         <td data-label="Status">
                             {% if resident.is_active %}
                                 <span class="badge bg-success-subtle text-success">Active</span>
@@ -113,32 +135,87 @@
                             {% endif %}
                         </td>
                         <td data-label="Actions">
-                            <div class="btn-group btn-group-sm account-action-group" role="group" aria-label="Resident account actions">
-                                <a class="btn btn-outline-primary" href="{% url 'accounts:edit_account' resident.pk %}" title="Edit account">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
-                                <form method="post" action="{% url 'accounts:toggle_account_status' resident.pk %}">
-                                    {% csrf_token %}
-                                    <button class="btn btn-outline-warning" type="submit" title="{% if resident.is_active %}Deactivate login{% else %}Activate login{% endif %}">
-                                        {% if resident.is_active %}
-                                            <i class="bi bi-person-dash"></i>
-                                        {% else %}
-                                            <i class="bi bi-person-check"></i>
-                                        {% endif %}
+                            <div class="!relative !inline-flex !justify-end" @click.outside="if (open === 'resident-{{ resident.pk }}') open = null">
+                                <button type="button"
+                                        class="!inline-flex !h-9 !w-9 !items-center !justify-center !rounded-lg !border !border-gray-200 !bg-white !text-gray-600 !shadow-sm !transition hover:!border-blue-300 hover:!bg-blue-50 hover:!text-blue-700"
+                                        @click="open = open === 'resident-{{ resident.pk }}' ? null : 'resident-{{ resident.pk }}'"
+                                        :aria-expanded="open === 'resident-{{ resident.pk }}'"
+                                        aria-label="Open resident actions">
+                                    <span class="!text-xl !leading-none">⋮</span>
+                                </button>
+                                <div x-cloak
+                                     x-show="open === 'resident-{{ resident.pk }}'"
+                                     x-transition:enter="!transition !ease-out !duration-150"
+                                     x-transition:enter-start="!opacity-0 !-translate-y-1"
+                                     x-transition:enter-end="!opacity-100 !translate-y-0"
+                                     x-transition:leave="!transition !ease-in !duration-100"
+                                     x-transition:leave-start="!opacity-100 !translate-y-0"
+                                     x-transition:leave-end="!opacity-0 !-translate-y-1"
+                                     class="!absolute !right-0 !top-10 !z-50 !min-w-[220px] !overflow-hidden !rounded-lg !border !border-gray-200 !bg-white !py-1 !text-sm !shadow-xl">
+                                    <div class="!border-b !border-gray-100 !px-3 !py-2">
+                                        <div class="!text-xs !font-semibold !uppercase !tracking-wide !text-gray-500">Verification</div>
+                                        {% with status=resident.resident_profile.verification_status %}
+                                            {% if status == "VERIFIED" %}
+                                                <span class="!mt-1 !inline-flex !rounded-full !bg-green-100 !px-2 !py-0.5 !text-xs !font-semibold !text-green-700">Verified</span>
+                                            {% elif status == "PENDING" %}
+                                                <span class="!mt-1 !inline-flex !rounded-full !bg-amber-100 !px-2 !py-0.5 !text-xs !font-semibold !text-amber-700">Pending</span>
+                                            {% elif status == "REJECTED" %}
+                                                <span class="!mt-1 !inline-flex !rounded-full !bg-red-100 !px-2 !py-0.5 !text-xs !font-semibold !text-red-700">Rejected</span>
+                                            {% else %}
+                                                <span class="!mt-1 !inline-flex !rounded-full !bg-gray-100 !px-2 !py-0.5 !text-xs !font-semibold !text-gray-700">Unverified</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                    <a href="{% url 'accounts:edit_account' resident.pk %}" class="!flex !items-center !gap-2 !px-3 !py-2 !text-gray-700 !no-underline hover:!bg-gray-100 hover:!text-gray-900">
+                                        <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a8.25 8.25 0 0 1 15 0"/></svg>
+                                        <span>View Profile</span>
+                                    </a>
+                                    <a href="{% url 'accounts:edit_account' resident.pk %}" class="!flex !items-center !gap-2 !px-3 !py-2 !text-gray-700 !no-underline hover:!bg-gray-100 hover:!text-gray-900">
+                                        <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/></svg>
+                                        <span>Edit Resident</span>
+                                    </a>
+                                    <form method="post" action="{% url 'accounts:reset_account_password' resident.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-gray-700 hover:!bg-gray-100 hover:!text-gray-900">
+                                            <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.03 5.91l-1.48 1.48H10.5v2.25H8.25v2.25H4.5v-3.75l6.34-6.34A6 6 0 1 1 21.75 8.25Z"/></svg>
+                                            <span>Reset Password</span>
+                                        </button>
+                                    </form>
+                                    {% if resident.resident_profile.verification_status == "UNVERIFIED" %}
+                                        <form method="post" action="{% url 'accounts:verify_resident' resident.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-gray-700 hover:!bg-green-50 hover:!text-green-700">
+                                                <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75 11.25 15 15 9.75m6 .75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                                                <span>Verify Resident</span>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    <button type="button" @click="confirmDeactivate = '{{ resident.pk }}'; open = null" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-red-500 hover:!bg-red-50">
+                                        <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                        <span>{% if resident.is_active %}Deactivate{% else %}Activate{% endif %}</span>
                                     </button>
-                                </form>
-                                <form method="post" action="{% url 'accounts:reset_account_password' resident.pk %}">
-                                    {% csrf_token %}
-                                    <button class="btn btn-outline-secondary" type="submit" title="Email temporary password">
-                                        <i class="bi bi-key"></i>
-                                    </button>
-                                </form>
+                                </div>
+                                <div x-cloak x-show="confirmDeactivate === '{{ resident.pk }}'" class="!fixed !inset-0 !z-[1060] !flex !items-center !justify-center !bg-black/40 !p-4">
+                                    <div @click.outside="confirmDeactivate = null"
+                                         x-transition
+                                         class="!w-full !max-w-sm !rounded-xl !bg-white !p-5 !shadow-2xl">
+                                        <h2 class="!mb-2 !text-lg !font-semibold !text-gray-900">{% if resident.is_active %}Deactivate resident?{% else %}Activate resident?{% endif %}</h2>
+                                        <p class="!mb-4 !text-sm !text-gray-600">This changes login access for {{ resident.get_full_name|default:resident.username }}.</p>
+                                        <div class="!flex !justify-end !gap-2">
+                                            <button type="button" class="!rounded-lg !border !border-gray-200 !bg-white !px-3 !py-2 !text-sm !text-gray-700 hover:!bg-gray-50" @click="confirmDeactivate = null">Cancel</button>
+                                            <form method="post" action="{% url 'accounts:toggle_account_status' resident.pk %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="!rounded-lg !bg-red-600 !px-3 !py-2 !text-sm !font-semibold !text-white hover:!bg-red-700">{% if resident.is_active %}Deactivate{% else %}Activate{% endif %}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7">
+                        <td colspan="8">
                             <div class="entity-empty">
                                 <i class="bi bi-people entity-empty-icon"></i>
                                 <p class="entity-empty-title">No residents found.</p>

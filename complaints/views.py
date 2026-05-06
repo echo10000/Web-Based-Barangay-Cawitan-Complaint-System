@@ -1,7 +1,11 @@
+import csv
+from io import BytesIO
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -9,6 +13,8 @@ from django.utils.dateparse import parse_date
 from accounts.models import User
 from .forms import (
     ComplaintForm,
+    ComplaintCategoryForm,
+    ComplaintReplyForm,
     ComplaintUpdateForm,
     EscalationForm,
     HearingAttendanceForm,
@@ -20,6 +26,8 @@ from .forms import (
 )
 from .models import (
     Complaint,
+    ComplaintCategory,
+    ComplaintReply,
     ComplaintResponse,
     ComplaintStatusHistory,
     Escalation,
@@ -111,6 +119,18 @@ def get_or_create_respondent(complaint):
         defaults={"full_name": "Unknown"},
     )
     return respondent
+
+
+def create_uploaded_evidence(complaint, file, user, evidence_type=UploadedEvidence.EvidenceType.INITIAL, description=""):
+    return UploadedEvidence.objects.create(
+        complaint=complaint,
+        file=file,
+        uploaded_by=user,
+        evidence_type=evidence_type,
+        description=description,
+        file_size=getattr(file, "size", 0) or 0,
+        content_type=getattr(file, "content_type", "") or "",
+    )
 
 
 @login_required
@@ -211,8 +231,8 @@ def submit_complaint_view(request):
             remarks="Complaint submitted.",
             public_remarks="Your complaint has been submitted successfully.",
         )
-        if form.cleaned_data.get("evidence"):
-            UploadedEvidence.objects.create(complaint=complaint, file=form.cleaned_data["evidence"])
+        for evidence_file in form.cleaned_data.get("evidence", []):
+            create_uploaded_evidence(complaint, evidence_file, request.user)
         create_notification(
             user=request.user,
             complaint=complaint,
@@ -241,6 +261,7 @@ def complaint_detail_view(request, pk):
             "evidence_files",
             "respondent_evidence_files",
             "responses",
+            "replies",
         ),
         pk=pk,
     )
@@ -255,6 +276,47 @@ def complaint_detail_view(request, pk):
     if not can_view:
         messages.error(request, "You do not have permission to view this complaint.")
         return redirect("complaints:list")
+
+    reply_form = ComplaintReplyForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and request.POST.get("workflow_action") == "reply":
+        if complaint.is_closed:
+            messages.error(request, "This complaint is closed and cannot receive new replies.")
+            return redirect(complaint.get_absolute_url())
+        if reply_form.is_valid():
+            reply = reply_form.save(commit=False)
+            reply.complaint = complaint
+            reply.author = request.user
+            if request.user.is_staff_member or request.user.is_barangay_admin:
+                reply.is_public = True
+            if reply.attachment:
+                reply.attachment_size = reply.attachment.size
+                reply.attachment_content_type = getattr(reply.attachment, "content_type", "") or ""
+            reply.save()
+            if request.user == complaint.resident:
+                recipient_ids = list(
+                    User.objects.filter(Q(role=User.Role.ADMIN) | Q(is_superuser=True))
+                    .values_list("id", flat=True)
+                    .distinct()
+                )
+                if complaint.assigned_to:
+                    recipient_ids.append(complaint.assigned_to_id)
+                for recipient in User.objects.filter(id__in=set(recipient_ids)):
+                    create_notification(
+                        user=recipient,
+                        complaint=complaint,
+                        message=f"Resident added a follow-up to complaint '{complaint.title}'.",
+                        notification_type=Notification.Type.REMARKS_ADDED,
+                    )
+            else:
+                create_notification(
+                    user=complaint.resident,
+                    complaint=complaint,
+                    message=f"Barangay staff replied to your complaint '{complaint.title}'.",
+                    notification_type=Notification.Type.REMARKS_ADDED,
+                )
+            messages.success(request, "Reply added successfully.")
+            return redirect(complaint.get_absolute_url())
+
     if request.user.is_resident and complaint.resident == request.user:
         Notification.objects.filter(user=request.user, complaint=complaint, is_read=False).update(
             is_read=True,
@@ -271,6 +333,7 @@ def complaint_detail_view(request, pk):
             "latest_hearing": latest_hearing,
             "public_status_history": public_status_history,
             "public_responses": public_responses,
+            "reply_form": reply_form,
         },
     )
 
@@ -498,7 +561,10 @@ def update_complaint_view(request, pk):
                 complaint=complaint,
                 file=response_form.cleaned_data["evidence"],
                 uploaded_by=request.user,
+                evidence_type=RespondentEvidence.EvidenceType.RESPONSE,
                 remarks=response_form.cleaned_data.get("evidence_remarks", ""),
+                file_size=getattr(response_form.cleaned_data["evidence"], "size", 0) or 0,
+                content_type=getattr(response_form.cleaned_data["evidence"], "content_type", "") or "",
             )
         complaint.status = Complaint.Status.RESPONDENT_RESPONSE_RECORDED
         complaint.save(update_fields=["status", "updated_at"])
@@ -638,16 +704,21 @@ def delete_complaint_view(request, pk):
     return render(request, "complaints/delete_complaint.html", {"complaint": complaint})
 
 
-@login_required
-@admin_required
-def reports_view(request):
+def get_report_complaints(request):
     date_from = parse_date(request.GET.get("date_from") or "")
     date_to = parse_date(request.GET.get("date_to") or "")
-    complaints = Complaint.objects.all()
+    complaints = Complaint.objects.select_related("category", "resident", "assigned_to")
     if date_from:
         complaints = complaints.filter(created_at__date__gte=date_from)
     if date_to:
         complaints = complaints.filter(created_at__date__lte=date_to)
+    return complaints, date_from, date_to
+
+
+@login_required
+@admin_required
+def reports_view(request):
+    complaints, date_from, date_to = get_report_complaints(request)
 
     status_labels = dict(Complaint.Status.choices)
     by_status = [
@@ -664,6 +735,12 @@ def reports_view(request):
     resolved_count = complaints.filter(status=Complaint.Status.RESOLVED).count()
     pending_count = complaints.filter(status=Complaint.Status.PENDING).count()
     overdue_count = sum(1 for complaint in complaints if complaint.is_overdue)
+    resolved_with_duration = complaints.filter(resolved_at__isnull=False).annotate(
+        resolution_duration=ExpressionWrapper(F("resolved_at") - F("created_at"), output_field=DurationField())
+    )
+    average_resolution = resolved_with_duration.aggregate(value=Avg("resolution_duration"))["value"]
+    average_resolution_hours = round(average_resolution.total_seconds() / 3600, 1) if average_resolution else 0
+    by_location = complaints.values("incident_location").annotate(total=Count("id")).order_by("-total")[:10]
     return render(
         request,
         "complaints/reports.html",
@@ -675,7 +752,129 @@ def reports_view(request):
             "resolved_count": resolved_count,
             "pending_count": pending_count,
             "overdue_count": overdue_count,
+            "average_resolution_hours": average_resolution_hours,
+            "by_location": by_location,
             "date_from": request.GET.get("date_from", ""),
             "date_to": request.GET.get("date_to", ""),
         },
     )
+
+
+@login_required
+@admin_required
+def reports_export_csv_view(request):
+    complaints, _, _ = get_report_complaints(request)
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="barangay-complaints-report.csv"'
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "ID",
+            "Title",
+            "Category",
+            "Priority",
+            "Status",
+            "Resident",
+            "Assigned To",
+            "Incident Location",
+            "Created At",
+            "Deadline",
+            "Resolved At",
+        ]
+    )
+    for complaint in complaints.order_by("-created_at"):
+        writer.writerow(
+            [
+                complaint.id,
+                complaint.title,
+                complaint.category.name if complaint.category else "Uncategorized",
+                complaint.get_priority_display(),
+                complaint.get_status_display(),
+                complaint.resident.get_full_name() or complaint.resident.username,
+                complaint.assigned_to.get_full_name() or complaint.assigned_to.username if complaint.assigned_to else "",
+                complaint.incident_location,
+                complaint.created_at.strftime("%Y-%m-%d %H:%M"),
+                complaint.deadline_at.strftime("%Y-%m-%d %H:%M") if complaint.deadline_at else "",
+                complaint.resolved_at.strftime("%Y-%m-%d %H:%M") if complaint.resolved_at else "",
+            ]
+        )
+    return response
+
+
+@login_required
+@admin_required
+def reports_export_pdf_view(request):
+    complaints, _, _ = get_report_complaints(request)
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+    except ImportError:
+        messages.error(request, "PDF export needs reportlab. Install requirements.txt, then try again.")
+        return redirect("complaints:reports")
+
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = height - 50
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(50, y, "Barangay Cawitan Complaints Report")
+    y -= 30
+    pdf.setFont("Helvetica", 9)
+    for complaint in complaints.order_by("-created_at")[:80]:
+        if y < 60:
+            pdf.showPage()
+            pdf.setFont("Helvetica", 9)
+            y = height - 50
+        line = (
+            f"#{complaint.id} {complaint.title[:42]} | {complaint.get_status_display()} | "
+            f"{complaint.get_priority_display()} | {complaint.created_at:%Y-%m-%d}"
+        )
+        pdf.drawString(50, y, line)
+        y -= 16
+    pdf.save()
+    buffer.seek(0)
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="barangay-complaints-report.pdf"'
+    return response
+
+
+@login_required
+@admin_required
+def category_management_view(request):
+    categories = ComplaintCategory.objects.annotate(total_complaints=Count("complaint")).order_by("name")
+    return render(request, "complaints/category_management.html", {"categories": categories})
+
+
+@login_required
+@admin_required
+def category_create_view(request):
+    form = ComplaintCategoryForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Category created successfully.")
+        return redirect("complaints:categories")
+    return render(request, "complaints/category_form.html", {"form": form, "category": None})
+
+
+@login_required
+@admin_required
+def category_edit_view(request, pk):
+    category = get_object_or_404(ComplaintCategory, pk=pk)
+    form = ComplaintCategoryForm(request.POST or None, instance=category)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Category updated successfully.")
+        return redirect("complaints:categories")
+    return render(request, "complaints/category_form.html", {"form": form, "category": category})
+
+
+@login_required
+@admin_required
+def category_toggle_view(request, pk):
+    if request.method != "POST":
+        return redirect("complaints:categories")
+    category = get_object_or_404(ComplaintCategory, pk=pk)
+    category.is_active = not category.is_active
+    category.save(update_fields=["is_active"])
+    messages.success(request, f"{category.name} has been {'activated' if category.is_active else 'deactivated'}.")
+    return redirect("complaints:categories")

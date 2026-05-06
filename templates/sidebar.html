@@ -1,5 +1,6 @@
 {% url 'dashboard:home'       as url_home %}
 {% url 'dashboard:resident'   as url_resident %}
+{% url 'dashboard:resident_help' as url_resident_help %}
 {% url 'dashboard:staff'      as url_staff %}
 {% url 'dashboard:admin'      as url_admin %}
 {% url 'complaints:list'      as url_complaints %}
@@ -9,6 +10,7 @@
 {% url 'accounts:residents'   as url_residents %}
 {% url 'accounts:staff'       as url_staff_mgmt %}
 {% url 'complaints:reports'   as url_reports %}
+{% url 'complaints:categories' as url_categories %}
 {% url 'accounts:logout'      as url_logout %}
 
 <aside class="app-sidebar">
@@ -54,6 +56,12 @@
            class="sidebar-link {% if request.path == url_staff_mgmt %}active{% endif %}">
             <i class="bi bi-person-badge-fill"></i>
             <span>Staff Accounts</span>
+        </a>
+
+        <a href="{{ url_categories }}"
+           class="sidebar-link {% if url_categories in request.path %}active{% endif %}">
+            <i class="bi bi-tags-fill"></i>
+            <span>Categories</span>
         </a>
 
         <a href="{{ url_reports }}"
@@ -164,8 +172,8 @@
             <span>Profile</span>
         </a>
 
-        <a href="{{ url_resident }}#help-card"
-           class="sidebar-link">
+        <a href="{{ url_resident_help }}"
+           class="sidebar-link {% if request.path == url_resident_help %}active{% endif %}">
             <i class="bi bi-question-circle-fill"></i>
             <span>Help</span>
         </a>
