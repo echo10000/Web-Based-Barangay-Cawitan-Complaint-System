@@ -10,7 +10,7 @@
     <div class="d-flex gap-2">
         {% if user.is_staff_member or user.is_barangay_admin %}
             <a class="btn btn-success" href="{% url 'complaints:update' complaint.pk %}">
-                <i class="bi bi-pencil-fill me-1"></i>Update
+                <i class="bi bi-pencil-fill me-1"></i>Update Workflow
             </a>
         {% endif %}
         {% if user.is_barangay_admin %}
@@ -21,8 +21,6 @@
     </div>
 </div>
 
-{# ── STATUS PROGRESS TRACKER ─────────────────────── #}
-{% with s=complaint.status %}
 <div class="content-card status-tracker-card mb-4">
     <div class="tracker-header">
         <span class="tracker-title">
@@ -30,83 +28,47 @@
         </span>
         {% include "complaints/_status_badge.html" with status=complaint.status %}
     </div>
-
-    {% if s == 'REJECTED' %}
-        <div class="tracker-rejected-notice">
-            <i class="bi bi-x-octagon-fill"></i>
-            <span>This complaint has been marked as <strong>Rejected</strong>. Please contact the barangay office for more information.</span>
-        </div>
-    {% else %}
-
-    <div class="status-tracker">
-
-        {# Step 1 — Submitted #}
-        <div class="tracker-step {% if s == 'PENDING' %}step--active{% else %}step--done{% endif %}">
-            <div class="tracker-dot">
-                {% if s == 'PENDING' %}
-                    <i class="bi bi-send-fill"></i>
-                {% else %}
-                    <i class="bi bi-check-lg"></i>
-                {% endif %}
+    {% with s=complaint.status %}
+        {% if s == "REJECTED" %}
+            <div class="tracker-rejected-notice">
+                <i class="bi bi-x-circle-fill"></i>
+                <div>This complaint has been rejected. Review the public remarks below for the barangay office's note.</div>
             </div>
-            <span class="tracker-label">Submitted</span>
-        </div>
+        {% else %}
+            <div class="status-tracker" aria-label="Complaint status progress">
+                <div class="tracker-step step--done">
+                    <span class="tracker-dot"><i class="bi bi-check-lg"></i></span>
+                    <span class="tracker-label">Submitted</span>
+                </div>
+                <div class="tracker-connector connector--done"></div>
 
-        {# Connector 1 → 2 #}
-        <div class="tracker-connector {% if s == 'UNDER_REVIEW' or s == 'IN_PROGRESS' or s == 'RESOLVED' %}connector--done{% endif %}"></div>
+                <div class="tracker-step {% if s == 'PENDING' or s == 'UNDER_REVIEW' %}step--active{% else %}step--done{% endif %}">
+                    <span class="tracker-dot">{% if s == 'PENDING' or s == 'UNDER_REVIEW' %}2{% else %}<i class="bi bi-check-lg"></i>{% endif %}</span>
+                    <span class="tracker-label">Review</span>
+                </div>
+                <div class="tracker-connector {% if s != 'PENDING' and s != 'UNDER_REVIEW' %}connector--done{% endif %}"></div>
 
-        {# Step 2 — Under Review #}
-        <div class="tracker-step {% if s == 'UNDER_REVIEW' %}step--active{% elif s == 'IN_PROGRESS' or s == 'RESOLVED' %}step--done{% endif %}">
-            <div class="tracker-dot">
-                {% if s == 'IN_PROGRESS' or s == 'RESOLVED' %}
-                    <i class="bi bi-check-lg"></i>
-                {% elif s == 'UNDER_REVIEW' %}
-                    <i class="bi bi-search"></i>
-                {% else %}
-                    <span>2</span>
-                {% endif %}
+                <div class="tracker-step {% if s == 'RESPONDENT_NOT_CONTACTED' or s == 'RESPONDENT_CONTACTED' or s == 'WAITING_RESPONDENT_RESPONSE' or s == 'RESPONDENT_RESPONSE_RECORDED' or s == 'NO_RESPONSE' or s == 'SECOND_NOTICE_SENT' %}step--active{% elif s == 'HEARING_SCHEDULED' or s == 'IN_MEDIATION' or s == 'FAILED_TO_ATTEND' or s == 'IN_PROGRESS' or s == 'RESOLVED' or s == 'UNRESOLVED' or s == 'ESCALATED' or s == 'CLOSED' %}step--done{% endif %}">
+                    <span class="tracker-dot">{% if s == 'HEARING_SCHEDULED' or s == 'IN_MEDIATION' or s == 'FAILED_TO_ATTEND' or s == 'IN_PROGRESS' or s == 'RESOLVED' or s == 'UNRESOLVED' or s == 'ESCALATED' or s == 'CLOSED' %}<i class="bi bi-check-lg"></i>{% else %}3{% endif %}</span>
+                    <span class="tracker-label">Respondent Contact</span>
+                </div>
+                <div class="tracker-connector {% if s == 'HEARING_SCHEDULED' or s == 'IN_MEDIATION' or s == 'FAILED_TO_ATTEND' or s == 'IN_PROGRESS' or s == 'RESOLVED' or s == 'UNRESOLVED' or s == 'ESCALATED' or s == 'CLOSED' %}connector--done{% endif %}"></div>
+
+                <div class="tracker-step {% if s == 'HEARING_SCHEDULED' or s == 'IN_MEDIATION' or s == 'FAILED_TO_ATTEND' %}step--active{% elif s == 'IN_PROGRESS' or s == 'RESOLVED' or s == 'UNRESOLVED' or s == 'ESCALATED' or s == 'CLOSED' %}step--done{% endif %}">
+                    <span class="tracker-dot">{% if s == 'IN_PROGRESS' or s == 'RESOLVED' or s == 'UNRESOLVED' or s == 'ESCALATED' or s == 'CLOSED' %}<i class="bi bi-check-lg"></i>{% else %}4{% endif %}</span>
+                    <span class="tracker-label">Hearing / Mediation</span>
+                </div>
+                <div class="tracker-connector {% if s == 'RESOLVED' or s == 'CLOSED' %}connector--done{% endif %}"></div>
+
+                <div class="tracker-step {% if s == 'RESOLVED' or s == 'CLOSED' %}step--resolved{% elif s == 'IN_PROGRESS' or s == 'UNRESOLVED' or s == 'ESCALATED' %}step--active{% endif %}">
+                    <span class="tracker-dot">{% if s == 'RESOLVED' or s == 'CLOSED' %}<i class="bi bi-check-lg"></i>{% else %}5{% endif %}</span>
+                    <span class="tracker-label">Resolution</span>
+                </div>
             </div>
-            <span class="tracker-label">Under Review</span>
-        </div>
-
-        {# Connector 2 → 3 #}
-        <div class="tracker-connector {% if s == 'IN_PROGRESS' or s == 'RESOLVED' %}connector--done{% endif %}"></div>
-
-        {# Step 3 — In Progress #}
-        <div class="tracker-step {% if s == 'IN_PROGRESS' %}step--active{% elif s == 'RESOLVED' %}step--done{% endif %}">
-            <div class="tracker-dot">
-                {% if s == 'RESOLVED' %}
-                    <i class="bi bi-check-lg"></i>
-                {% elif s == 'IN_PROGRESS' %}
-                    <i class="bi bi-arrow-repeat"></i>
-                {% else %}
-                    <span>3</span>
-                {% endif %}
-            </div>
-            <span class="tracker-label">In Progress</span>
-        </div>
-
-        {# Connector 3 → 4 #}
-        <div class="tracker-connector {% if s == 'RESOLVED' %}connector--done{% endif %}"></div>
-
-        {# Step 4 — Resolved #}
-        <div class="tracker-step {% if s == 'RESOLVED' %}step--active step--resolved{% endif %}">
-            <div class="tracker-dot">
-                {% if s == 'RESOLVED' %}
-                    <i class="bi bi-check-circle-fill"></i>
-                {% else %}
-                    <span>4</span>
-                {% endif %}
-            </div>
-            <span class="tracker-label">Resolved</span>
-        </div>
-
-    </div>
-    {% endif %}
+        {% endif %}
+    {% endwith %}
 </div>
-{% endwith %}
 
-{# ── MAIN CONTENT ─────────────────────────────────── #}
 <div class="row detail-layout">
     <div class="col-lg-8">
         <div class="content-card">
@@ -117,83 +79,155 @@
                 <dd class="col-sm-8">{{ complaint.category.name|default:"Uncategorized" }}</dd>
                 <dt class="col-sm-4">Priority</dt>
                 <dd class="col-sm-8">{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</dd>
-                <dt class="col-sm-4">SLA Deadline</dt>
-                <dd class="col-sm-8">
-                    {% if complaint.deadline_at %}
-                        <span class="sla-badge {% if complaint.is_overdue %}sla-badge--overdue{% elif complaint.is_closed %}sla-badge--closed{% else %}sla-badge--on-track{% endif %}">
-                            {{ complaint.sla_label }}
-                        </span>
-                        <span class="ms-2">{{ complaint.deadline_at|date:"M d, Y h:i A" }}</span>
-                    {% else %}
-                        <span class="text-muted">Not set</span>
-                    {% endif %}
-                </dd>
-                {% if complaint.resolved_at %}
-                    <dt class="col-sm-4">Resolved Date</dt>
-                    <dd class="col-sm-8">{{ complaint.resolved_at|date:"M d, Y h:i A" }}</dd>
-                {% endif %}
                 <dt class="col-sm-4">Incident Location</dt>
                 <dd class="col-sm-8">{{ complaint.incident_location }}</dd>
                 <dt class="col-sm-4">Incident Date</dt>
                 <dd class="col-sm-8">{{ complaint.incident_date|default:"Not provided" }}</dd>
-                <dt class="col-sm-4">Resident</dt>
-                <dd class="col-sm-8">{{ complaint.resident.get_full_name|default:complaint.resident.username }}</dd>
-                <dt class="col-sm-4">Contact Number</dt>
-                <dd class="col-sm-8">
-                    {% if complaint.contact_number %}
-                        <a href="tel:{{ complaint.contact_number }}" class="detail-contact-link">
-                            <i class="bi bi-telephone-fill me-1"></i>{{ complaint.contact_number }}
-                        </a>
-                    {% else %}
-                        <span class="text-muted">Not provided</span>
-                    {% endif %}
-                </dd>
-                <dt class="col-sm-4">Assigned Staff</dt>
-                <dd class="col-sm-8">{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</dd>
+                <dt class="col-sm-4">Current Status</dt>
+                <dd class="col-sm-8">{% include "complaints/_status_badge.html" with status=complaint.status %}</dd>
+                {% if complaint.resolved_at %}
+                    <dt class="col-sm-4">Resolved Date</dt>
+                    <dd class="col-sm-8">{{ complaint.resolved_at|date:"M d, Y h:i A" }}</dd>
+                {% endif %}
+                {% if user.is_staff_member or user.is_barangay_admin %}
+                    <dt class="col-sm-4">Complainant</dt>
+                    <dd class="col-sm-8">{{ complaint.resident.get_full_name|default:complaint.resident.username }}</dd>
+                    <dt class="col-sm-4">Complainant Contact</dt>
+                    <dd class="col-sm-8">{{ complaint.contact_number|default:"Not provided" }}</dd>
+                    <dt class="col-sm-4">Assigned Staff</dt>
+                    <dd class="col-sm-8">{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</dd>
+                    <dt class="col-sm-4">Privacy Consent</dt>
+                    <dd class="col-sm-8">
+                        {{ complaint.privacy_consent|yesno:"Accepted,Not accepted" }}
+                        {% if complaint.consented_at %}<span class="text-muted">on {{ complaint.consented_at|date:"M d, Y h:i A" }}</span>{% endif %}
+                    </dd>
+                {% endif %}
             </dl>
         </div>
-        <div class="content-card mt-4">
-            <div class="section-title"><i class="bi bi-chat-left-text-fill me-1"></i>Responses / Remarks</div>
-            {% for response in complaint.responses.all %}
-                <div class="timeline-item">
-                    <strong>{% if response.responder %}{{ response.responder.get_full_name|default:response.responder.username }}{% else %}Staff{% endif %}</strong>
-                    <small>{{ response.created_at|date:"M d, Y h:i A" }}</small>
-                    <p>{{ response.remarks|linebreaks }}</p>
-                </div>
-            {% empty %}
-                <p class="entity-muted mb-0">
-                    <i class="bi bi-chat-left me-1"></i>No responses yet.
-                </p>
-            {% endfor %}
-        </div>
-        <div class="content-card mt-4">
-            <div class="section-title"><i class="bi bi-clock-history me-1"></i>Status History</div>
-            {% for item in complaint.status_history.all %}
-                <div class="timeline-item">
-                    <strong>
-                        {% if item.old_status %}
-                            {{ item.get_old_status_display }} to {{ item.get_new_status_display }}
-                        {% else %}
-                            {{ item.get_new_status_display }}
-                        {% endif %}
-                    </strong>
-                    <small>
-                        {{ item.changed_at|date:"M d, Y h:i A" }}
-                        {% if item.changed_by %}
-                            by {{ item.changed_by.get_full_name|default:item.changed_by.username }}
-                        {% endif %}
-                    </small>
-                    {% if item.remarks %}
-                        <p>{{ item.remarks|linebreaks }}</p>
+
+        {% if latest_hearing %}
+            <div class="content-card mt-4">
+                <div class="section-title"><i class="bi bi-calendar-event-fill me-1"></i>Hearing / Mediation Schedule</div>
+                <dl class="row detail-list mb-0">
+                    <dt class="col-sm-4">Date</dt>
+                    <dd class="col-sm-8">{{ latest_hearing.date|date:"M d, Y" }}</dd>
+                    <dt class="col-sm-4">Time</dt>
+                    <dd class="col-sm-8">{{ latest_hearing.time|time:"h:i A" }}</dd>
+                    <dt class="col-sm-4">Location</dt>
+                    <dd class="col-sm-8">{{ latest_hearing.location }}</dd>
+                    <dt class="col-sm-4">Purpose</dt>
+                    <dd class="col-sm-8">{{ latest_hearing.purpose }}</dd>
+                    <dt class="col-sm-4">Instructions</dt>
+                    <dd class="col-sm-8">{{ latest_hearing.remarks|default:"Please attend on time."|linebreaks }}</dd>
+                    {% if user.is_staff_member or user.is_barangay_admin %}
+                        <dt class="col-sm-4">Attendance</dt>
+                        <dd class="col-sm-8">
+                            Complainant: {{ latest_hearing.complainant_attended|yesno:"Attended,Did not attend" }}<br>
+                            Respondent: {{ latest_hearing.respondent_attended|yesno:"Attended,Did not attend" }}
+                        </dd>
+                        <dt class="col-sm-4">Mediation Result</dt>
+                        <dd class="col-sm-8">{{ latest_hearing.get_mediation_result_display }}</dd>
                     {% endif %}
-                </div>
-            {% empty %}
-                <p class="entity-muted mb-0">
-                    <i class="bi bi-clock me-1"></i>No status history yet.
-                </p>
-            {% endfor %}
+                </dl>
+            </div>
+        {% endif %}
+
+        <div class="content-card mt-4">
+            <div class="section-title"><i class="bi bi-clock-history me-1"></i>{% if user.is_staff_member or user.is_barangay_admin %}Full Timeline{% else %}Complaint Timeline{% endif %}</div>
+            {% if user.is_staff_member or user.is_barangay_admin %}
+                {% for item in complaint.status_history.all %}
+                    <div class="timeline-item">
+                        <strong>
+                            {% if item.old_status %}{{ item.get_old_status_display }} to {{ item.get_new_status_display }}{% else %}{{ item.get_new_status_display }}{% endif %}
+                        </strong>
+                        <small>
+                            {{ item.changed_at|date:"M d, Y h:i A" }}
+                            {% if item.changed_by %}by {{ item.changed_by.get_full_name|default:item.changed_by.username }}{% endif %}
+                        </small>
+                        {% if item.public_remarks %}<p><strong>Public:</strong> {{ item.public_remarks|linebreaksbr }}</p>{% endif %}
+                        {% if item.internal_remarks %}<p><strong>Internal:</strong> {{ item.internal_remarks|linebreaksbr }}</p>{% endif %}
+                        {% if item.remarks %}<p>{{ item.remarks|linebreaks }}</p>{% endif %}
+                    </div>
+                {% empty %}
+                    <p class="entity-muted mb-0">No status history yet.</p>
+                {% endfor %}
+            {% else %}
+                {% for item in public_status_history %}
+                    <div class="timeline-item">
+                        <strong>{{ item.get_new_status_display }}</strong>
+                        <small>{{ item.changed_at|date:"M d, Y h:i A" }}</small>
+                        <p>{{ item.public_remarks|linebreaks }}</p>
+                    </div>
+                {% empty %}
+                    <div class="timeline-item">
+                        <strong>Complaint submitted</strong>
+                        <small>{{ complaint.created_at|date:"M d, Y h:i A" }}</small>
+                        <p>Your complaint has been submitted successfully.</p>
+                    </div>
+                {% endfor %}
+            {% endif %}
         </div>
+
+        {% if user.is_staff_member or user.is_barangay_admin %}
+            <div class="content-card mt-4">
+                <div class="section-title"><i class="bi bi-person-lines-fill me-1"></i>Respondent / Other Party Information</div>
+                {% with respondent=complaint.respondent %}
+                    <dl class="row detail-list mb-0">
+                        <dt class="col-sm-4">Full Name</dt>
+                        <dd class="col-sm-8">{{ respondent.full_name|default:"Unknown" }}</dd>
+                        <dt class="col-sm-4">Contact Number</dt>
+                        <dd class="col-sm-8">{{ respondent.contact_number|default:"Not provided" }}</dd>
+                        <dt class="col-sm-4">Address or Purok</dt>
+                        <dd class="col-sm-8">{{ respondent.address|default:"Not provided" }}</dd>
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8">{{ respondent.email|default:"Not provided" }}</dd>
+                        <dt class="col-sm-4">Relationship</dt>
+                        <dd class="col-sm-8">{{ respondent.relationship_to_complainant|default:"Not provided" }}</dd>
+                        <dt class="col-sm-4">Known to Complainant</dt>
+                        <dd class="col-sm-8">{{ respondent.is_known_to_complainant|yesno:"Yes,No" }}</dd>
+                        <dt class="col-sm-4">Identifying Details</dt>
+                        <dd class="col-sm-8">{{ respondent.identifying_details|default:"None"|linebreaks }}</dd>
+                        <dt class="col-sm-4">Contact Tracking</dt>
+                        <dd class="col-sm-8">
+                            Contacted: {{ respondent.contacted|yesno:"Yes,No" }}<br>
+                            Method: {{ respondent.get_contact_method_display|default:"Not recorded" }}<br>
+                            Date: {{ respondent.contact_date|default:"Not recorded" }}<br>
+                            Response Status: {{ respondent.get_response_status_display }}
+                        </dd>
+                    </dl>
+                {% endwith %}
+            </div>
+
+            <div class="content-card mt-4">
+                <div class="section-title"><i class="bi bi-chat-left-text-fill me-1"></i>Responses / Remarks</div>
+                {% for response in complaint.responses.all %}
+                    <div class="timeline-item">
+                        <strong>{{ response.get_source_display }}</strong>
+                        <small>
+                            {{ response.created_at|date:"M d, Y h:i A" }}
+                            {% if response.responder %}by {{ response.responder.get_full_name|default:response.responder.username }}{% endif %}
+                            {% if not response.is_public %}<span class="ms-1 text-muted">Internal</span>{% endif %}
+                        </small>
+                        <p>{{ response.remarks|linebreaks }}</p>
+                    </div>
+                {% empty %}
+                    <p class="entity-muted mb-0">No responses yet.</p>
+                {% endfor %}
+            </div>
+        {% elif public_responses %}
+            <div class="content-card mt-4">
+                <div class="section-title"><i class="bi bi-chat-left-text-fill me-1"></i>Public Remarks</div>
+                {% for response in public_responses %}
+                    <div class="timeline-item">
+                        <strong>Barangay Office</strong>
+                        <small>{{ response.created_at|date:"M d, Y h:i A" }}</small>
+                        <p>{{ response.remarks|linebreaks }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
+
     <div class="col-lg-4 mt-4 mt-lg-0">
         <div class="content-card complaint-summary-card mb-4">
             <div class="summary-card-top">
@@ -204,32 +238,24 @@
                 {% include "complaints/_status_badge.html" with status=complaint.status %}
             </div>
             <div class="summary-list">
-                <div class="summary-item">
-                    <span>Priority</span>
-                    <strong>{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</strong>
-                </div>
-                <div class="summary-item">
-                    <span>SLA</span>
-                    <strong>
-                        {% if complaint.deadline_at %}
-                            <span class="sla-badge {% if complaint.is_overdue %}sla-badge--overdue{% elif complaint.is_closed %}sla-badge--closed{% else %}sla-badge--on-track{% endif %}">{{ complaint.sla_label }}</span>
-                        {% else %}
-                            Not set
-                        {% endif %}
-                    </strong>
-                </div>
-                <div class="summary-item">
-                    <span>Category</span>
-                    <strong>{{ complaint.category.name|default:"Uncategorized" }}</strong>
-                </div>
-                <div class="summary-item">
-                    <span>Assigned Staff</span>
-                    <strong>{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}Unassigned{% endif %}</strong>
-                </div>
+                <div class="summary-item"><span>Category</span><strong>{{ complaint.category.name|default:"Uncategorized" }}</strong></div>
+                <div class="summary-item"><span>Priority</span><strong>{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</strong></div>
+                <div class="summary-item"><span>Submitted</span><strong>{{ complaint.created_at|date:"M d, Y" }}</strong></div>
+                {% if complaint.escalation and user.is_staff_member or complaint.escalation and user.is_barangay_admin %}
+                    <div class="summary-item"><span>Escalated To</span><strong>{{ complaint.escalation.escalated_to }}</strong></div>
+                {% elif complaint.escalation %}
+                    <div class="summary-item"><span>Escalation</span><strong>For further action</strong></div>
+                {% endif %}
             </div>
+            {% if complaint.public_remarks %}
+                <div class="mt-3">
+                    <p class="section-kicker mb-1">Public Remarks</p>
+                    <p class="mb-0">{{ complaint.public_remarks|linebreaks }}</p>
+                </div>
+            {% endif %}
             {% if user.is_staff_member or user.is_barangay_admin %}
                 <a class="btn btn-success w-100 mt-3" href="{% url 'complaints:update' complaint.pk %}">
-                    <i class="bi bi-pencil-fill me-1"></i>Update Complaint
+                    <i class="bi bi-pencil-fill me-1"></i>Update Workflow
                 </a>
             {% endif %}
         </div>
@@ -241,17 +267,37 @@
                     <span class="evidence-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                     <span>
                         <strong>{{ evidence.file.name }}</strong>
-                        <small>Open uploaded file</small>
+                        <small>Complainant file</small>
                     </span>
                     <i class="bi bi-box-arrow-up-right ms-auto"></i>
                 </a>
             {% empty %}
                 <div class="entity-empty evidence-empty">
-                    <i class="bi bi-file-earmark-x entity-empty-icon"></i>
+                    <i class="bi bi-paperclip entity-empty-icon"></i>
                     <p class="entity-empty-title">No uploaded evidence.</p>
-                    <p class="entity-empty-subtitle">Files attached by the resident will appear here.</p>
+                    <p class="entity-empty-subtitle">Any uploaded files for this complaint will appear here.</p>
                 </div>
             {% endfor %}
+            {% if user.is_staff_member or user.is_barangay_admin %}
+                <hr>
+                <p class="section-kicker mb-2">Respondent Evidence</p>
+                {% for evidence in complaint.respondent_evidence_files.all %}
+                    <a class="evidence-link evidence-link--modern" href="{{ evidence.file.url }}" target="_blank">
+                        <span class="evidence-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
+                        <span>
+                            <strong>{{ evidence.file.name }}</strong>
+                            <small>{{ evidence.remarks|default:"Respondent file" }}</small>
+                        </span>
+                        <i class="bi bi-box-arrow-up-right ms-auto"></i>
+                    </a>
+                {% empty %}
+                    <div class="entity-empty evidence-empty">
+                        <i class="bi bi-file-earmark entity-empty-icon"></i>
+                        <p class="entity-empty-title">No respondent evidence.</p>
+                        <p class="entity-empty-subtitle">Files provided by the respondent will appear here.</p>
+                    </div>
+                {% endfor %}
+            {% endif %}
         </div>
     </div>
 </div>

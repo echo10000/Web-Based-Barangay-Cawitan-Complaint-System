@@ -880,6 +880,73 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     color: #991B1B;
 }
 
+.status-badge--respondent-contacted {
+    background: #E0E7FF;
+    color: #3730A3;
+}
+
+.status-badge--waiting {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-badge--response-recorded {
+    background: #CCFBF1;
+    color: #0F766E;
+}
+
+.status-badge--no-response,
+.status-badge--second-notice,
+.status-badge--mediation {
+    background: #FFEDD5;
+    color: #C2410C;
+}
+
+.status-badge--failed,
+.status-badge--unresolved {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.status-badge--hearing {
+    background: #F3E8FF;
+    color: #7E22CE;
+}
+
+.status-badge--escalated {
+    background: #7F1D1D;
+    color: #FEE2E2;
+}
+
+.status-badge--closed {
+    background: #E5E7EB;
+    color: #374151;
+}
+
+.workflow-strip {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(5, 1fr);
+    margin-top: 16px;
+}
+
+.workflow-strip span {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .workflow-strip {
+        grid-template-columns: 1fr;
+    }
+}
+
 .priority-badge {
     border-radius: 999px;
     display: inline-block;
@@ -3593,6 +3660,23 @@ button,
     padding: 22px 0 24px;
 }
 
+.workflow-empty-state {
+    align-items: center;
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    border-radius: 12px;
+    display: flex;
+    gap: 10px;
+    margin: 22px 24px 24px;
+    padding: 14px 16px;
+}
+
+.workflow-empty-state i {
+    color: #1E3A8A;
+    flex: 0 0 auto;
+    font-size: 16px;
+}
+
 .form-section {
     border: 1px solid #E2E8F0;
     border-radius: 14px;
@@ -3640,8 +3724,7 @@ button,
 }
 
 .complaint-summary-card {
-    position: sticky;
-    top: calc(var(--navbar-h) + 18px);
+    position: static;
 }
 
 .summary-card-top {
@@ -3822,5 +3905,338 @@ button,
     .content-card,
     .stat-card {
         box-shadow: none !important;
+    }
+}
+
+/* ================================================
+   ACCOUNT / MANAGEMENT POLISH
+   Scoped polish for account profile and management pages.
+   ================================================ */
+.account-polish-page .page-header-row {
+    align-items: flex-start;
+}
+
+.account-polish-page .page-header-row .btn {
+    flex: 0 0 auto;
+}
+
+.account-polish-page--management .entity-stats-grid {
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.account-polish-page--management .stat-card {
+    border-radius: 14px;
+    min-height: 164px;
+    padding: 18px 20px;
+}
+
+.account-polish-page--management .stat-card strong {
+    font-size: 32px;
+}
+
+.account-toolbar-card {
+    margin-bottom: 18px !important;
+}
+
+.account-toolbar-card .entity-toolbar {
+    align-items: end;
+    gap: 14px;
+}
+
+.account-toolbar-card .entity-search .form-label {
+    margin-bottom: 7px;
+}
+
+.account-toolbar-card .complaint-search-input-wrap > .form-control {
+    min-height: 46px;
+    padding-right: 14px;
+}
+
+.account-toolbar-card .entity-toolbar-actions {
+    align-items: center;
+}
+
+.account-toolbar-card .entity-toolbar-actions .btn {
+    min-height: 46px;
+}
+
+.account-records-card .entity-card-header {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    padding: 20px 22px;
+}
+
+.account-directory-table {
+    table-layout: auto;
+}
+
+.account-directory-table tbody tr {
+    transition: background .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.account-directory-table tbody tr:hover {
+    background: #F8FAFC;
+    box-shadow: inset 4px 0 0 var(--emerald);
+}
+
+.account-directory-table .person-cell strong {
+    color: #0F172A;
+    display: block;
+    line-height: 1.25;
+}
+
+.account-directory-table td {
+    overflow-wrap: anywhere;
+}
+
+.account-directory-table td[data-label="Email"],
+.account-directory-table td[data-label="Address"] {
+    color: #475569;
+}
+
+.account-records-card .entity-empty {
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    border-radius: 14px;
+    margin: 22px;
+    padding: 44px 22px;
+}
+
+.account-records-card .entity-empty-icon {
+    background: #EFF6FF;
+    border: 1px solid #DBEAFE;
+    border-radius: 14px;
+    color: var(--navy);
+    display: inline-flex;
+    font-size: 28px;
+    height: 58px;
+    justify-content: center;
+    margin-bottom: 14px;
+    width: 58px;
+}
+
+.account-records-card .entity-empty-title {
+    color: #0F172A;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+.account-records-card .entity-empty-subtitle {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 420px;
+}
+
+.account-action-group {
+    align-items: center;
+    display: inline-flex;
+    gap: 4px;
+}
+
+.account-action-group form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.account-action-group .btn {
+    align-items: center;
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    width: 36px;
+}
+
+.account-polish-page--form .modern-form-card {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.account-polish-form .form-section {
+    background: #FFFFFF;
+}
+
+.account-polish-form .account-form-field {
+    min-width: 0;
+}
+
+.account-polish-form .form-control,
+.account-polish-form .form-select {
+    min-height: 46px;
+}
+
+.account-polish-form textarea.form-control {
+    min-height: 112px;
+}
+
+.account-polish-form .text-danger {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+.account-polish-form .form-action-bar {
+    margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+    .account-polish-page .page-header-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .account-polish-page .page-header-row .btn {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .account-toolbar-card .entity-toolbar-actions {
+        align-items: stretch;
+    }
+
+    .account-toolbar-card .entity-toolbar-actions .btn,
+    .account-toolbar-card .entity-toolbar-actions .complaint-filter-meta {
+        width: 100%;
+    }
+}
+
+@media (max-width: 760px) {
+    .account-records-card {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        overflow: visible;
+    }
+
+    .account-records-card .entity-card-header {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        margin-bottom: 12px;
+    }
+
+    .account-records-card .table-responsive {
+        overflow: visible;
+    }
+
+    .account-directory-table,
+    .account-directory-table thead,
+    .account-directory-table tbody,
+    .account-directory-table tr,
+    .account-directory-table th,
+    .account-directory-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .account-directory-table thead {
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        position: absolute;
+        white-space: nowrap;
+        width: 1px;
+    }
+
+    .account-directory-table tbody {
+        display: grid;
+        gap: 12px;
+    }
+
+    .account-directory-table tbody tr {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        box-shadow: 0 12px 28px rgba(15,23,42,.07), 0 2px 8px rgba(15,23,42,.04);
+        overflow: hidden;
+    }
+
+    .account-directory-table tbody tr:hover {
+        background: #FFFFFF;
+        box-shadow: 0 14px 30px rgba(15,23,42,.09), inset 4px 0 0 var(--emerald);
+    }
+
+    .account-directory-table tbody td {
+        align-items: flex-start;
+        border-bottom: 1px solid #F1F5F9;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+        min-height: 48px;
+        padding: 12px 14px;
+        text-align: right;
+    }
+
+    .account-directory-table tbody td::before {
+        color: #64748B;
+        content: attr(data-label);
+        flex: 0 0 92px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+    .account-directory-table tbody td:first-child {
+        background: #F8FAFC;
+        display: block;
+        text-align: left;
+    }
+
+    .account-directory-table tbody td:first-child::before {
+        display: none;
+    }
+
+    .account-directory-table .person-cell {
+        min-width: 0;
+    }
+
+    .account-directory-table .entity-chip {
+        margin-left: auto;
+        max-width: 100%;
+    }
+
+    .account-directory-table td[colspan] {
+        display: block;
+        padding: 0;
+    }
+
+    .account-directory-table td[colspan]::before {
+        display: none;
+    }
+
+    .account-records-card .entity-empty {
+        margin: 0;
+    }
+}
+
+@media (max-width: 560px) {
+    .account-polish-page--management .stat-card {
+        min-height: 0;
+    }
+
+    .account-toolbar-card {
+        padding: 16px;
+    }
+
+    .account-toolbar-card .complaint-filter-meta {
+        justify-content: space-between;
+    }
+
+    .account-polish-page--form .modern-form-card {
+        border-radius: 14px;
+    }
+
+    .account-polish-page--form .form-card-heading {
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .account-polish-form .form-section {
+        margin-bottom: 14px;
+        padding: 14px;
     }
 }

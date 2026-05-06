@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ account_type }} Account | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="account-polish-page">
+    <div class="page-header page-header-row">
+        <div>
+            <h1>Edit {{ account_type }} Account</h1>
+            <p>{{ account.get_full_name|default:account.username }} - {{ account.username }}</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% if account.is_staff_member %}{% url 'accounts:staff' %}{% else %}{% url 'accounts:residents' %}{% endif %}">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+
+    <div class="content-card account-form-card">
+        <form method="post" class="account-form-grid">
+            {% csrf_token %}
+            <div>
+                <p class="entity-card-title">Login and identity</p>
+                <div class="row g-3">
+                    {% for field in user_form %}
+                        <div class="{% if field.name == 'is_active' %}col-12{% else %}col-md-6{% endif %}">
+                            {% if field.name == "is_active" %}
+                                <div class="form-check mt-2">
+                                    {{ field }}
+                                    <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                </div>
+                            {% else %}
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            {% endif %}
+                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <p class="entity-card-title">{{ account_type }} profile</p>
+                <div class="row g-3">
+                    {% for field in profile_form %}
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-actions mt-4">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-save-fill me-1"></i>Save Changes
+                </button>
+                <a class="btn btn-outline-secondary" href="{% if account.is_staff_member %}{% url 'accounts:staff' %}{% else %}{% url 'accounts:residents' %}{% endif %}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

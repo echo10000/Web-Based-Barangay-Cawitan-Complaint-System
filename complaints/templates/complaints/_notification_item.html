@@ -21,6 +21,7 @@
         <div class="notif-icon notif-icon--navy"><i class="bi bi-bell-fill"></i></div>
     {% endif %}
     <div class="notif-body">
+        {% if item.title %}<p class="notif-title mb-1"><strong>{{ item.title }}</strong></p>{% endif %}
         <p class="notif-message">{{ item.message }}</p>
         <div class="notif-meta">
             {% if item.complaint %}

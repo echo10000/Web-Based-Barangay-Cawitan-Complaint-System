@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Edit Profile | Barangay Cawitan{% endblock %}
 {% block content %}
+<div class="account-polish-page account-polish-page--form">
 <div class="page-header page-header-row">
     <div>
         <h1>Edit Profile</h1>
@@ -19,15 +20,15 @@
             <p class="entity-card-subtitle">Use accurate contact details so staff can reach you quickly.</p>
         </div>
     </div>
-    <form method="post" novalidate>
+    <form method="post" class="account-polish-form" novalidate>
         {% csrf_token %}
         <div class="form-section">
             <div class="form-section-heading">
                 <span>Login & Identity</span>
             </div>
-            <div class="row">
+            <div class="row account-form-grid">
             {% for field in user_form %}
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6 mb-3 account-form-field">
                     <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
                     {% for error in field.errors %}
@@ -42,9 +43,9 @@
                 <div class="form-section-heading">
                     <span>Contact Details</span>
                 </div>
-                <div class="row">
+                <div class="row account-form-grid">
                 {% for field in profile_form %}
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-6 mb-3 account-form-field">
                         <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                         {% for error in field.errors %}
@@ -62,5 +63,6 @@
             <a class="btn btn-outline-secondary" href="{% url 'dashboard:home' %}">Cancel</a>
         </div>
     </form>
+</div>
 </div>
 {% endblock %}

@@ -6,10 +6,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.core.mail import send_mail
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.conf import settings
+from django.utils.crypto import get_random_string
 
 from .forms import (
+    AdminAccountForm,
     LoginForm,
     ResidentProfileForm,
     ResidentRegistrationForm,
@@ -49,6 +52,19 @@ def admin_required(view_func):
         return redirect("dashboard:home")
 
     return wrapper
+
+
+def _admin_managed_account_or_404(pk):
+    account = get_object_or_404(User, pk=pk)
+    if account.role not in (User.Role.RESIDENT, User.Role.STAFF):
+        raise Http404("Account is not managed from this page.")
+    return account
+
+
+def _account_list_url(account):
+    if account.role == User.Role.STAFF:
+        return "accounts:staff"
+    return "accounts:residents"
 
 
 class RoleAwareLoginView(LoginView):
@@ -200,6 +216,84 @@ def create_staff_view(request):
         messages.success(request, "Staff account created successfully.")
         return redirect("accounts:staff")
     return render(request, "accounts/create_staff.html", {"form": form})
+
+
+@login_required
+@admin_required
+def edit_account_view(request, pk):
+    account = _admin_managed_account_or_404(pk)
+    user_form = AdminAccountForm(request.POST or None, instance=account)
+    if account.role == User.Role.RESIDENT:
+        profile, _ = ResidentProfile.objects.get_or_create(user=account, defaults={"address": ""})
+        profile_form = ResidentProfileForm(request.POST or None, instance=profile)
+        account_type = "Resident"
+    else:
+        profile, _ = StaffProfile.objects.get_or_create(user=account)
+        profile_form = StaffProfileForm(request.POST or None, instance=profile)
+        account_type = "Staff"
+
+    if request.method == "POST" and user_form.is_valid() and profile_form.is_valid():
+        user_form.save()
+        profile_form.save()
+        messages.success(request, f"{account_type} account updated successfully.")
+        return redirect(_account_list_url(account))
+
+    return render(
+        request,
+        "accounts/edit_account.html",
+        {
+            "account": account,
+            "account_type": account_type,
+            "user_form": user_form,
+            "profile_form": profile_form,
+        },
+    )
+
+
+@login_required
+@admin_required
+def toggle_account_status_view(request, pk):
+    if request.method != "POST":
+        return redirect("dashboard:home")
+    account = _admin_managed_account_or_404(pk)
+    account.is_active = not account.is_active
+    account.save(update_fields=["is_active"])
+    state = "activated" if account.is_active else "deactivated"
+    messages.success(request, f"{account.get_full_name() or account.username} has been {state}.")
+    return redirect(_account_list_url(account))
+
+
+@login_required
+@admin_required
+def reset_account_password_view(request, pk):
+    if request.method != "POST":
+        return redirect("dashboard:home")
+    account = _admin_managed_account_or_404(pk)
+    if not account.email:
+        messages.error(request, "This account has no email address for password reset.")
+        return redirect(_account_list_url(account))
+    temporary_password = get_random_string(12)
+    account.set_password(temporary_password)
+    account.save(update_fields=["password"])
+    try:
+        send_mail(
+            "Barangay Cawitan - Temporary Password",
+            (
+                f"Hello {account.get_full_name() or account.username},\n\n"
+                f"An administrator reset your Barangay Cawitan account password.\n\n"
+                f"Username: {account.username}\n"
+                f"Temporary password: {temporary_password}\n\n"
+                "Please log in and change your password as soon as possible."
+            ),
+            settings.DEFAULT_FROM_EMAIL,
+            [account.email],
+            fail_silently=False,
+        )
+    except Exception:
+        messages.error(request, "Password was reset, but the temporary password email could not be sent.")
+    else:
+        messages.success(request, f"Temporary password sent to {account.email}.")
+    return redirect(_account_list_url(account))
 
 
 @login_required

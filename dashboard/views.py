@@ -16,6 +16,15 @@ from complaints.services import create_notification
 ACTIVE_URGENT_STATUSES = [
     Complaint.Status.PENDING,
     Complaint.Status.UNDER_REVIEW,
+    Complaint.Status.RESPONDENT_NOT_CONTACTED,
+    Complaint.Status.RESPONDENT_CONTACTED,
+    Complaint.Status.WAITING_RESPONDENT_RESPONSE,
+    Complaint.Status.RESPONDENT_RESPONSE_RECORDED,
+    Complaint.Status.NO_RESPONSE,
+    Complaint.Status.FAILED_TO_ATTEND,
+    Complaint.Status.SECOND_NOTICE_SENT,
+    Complaint.Status.HEARING_SCHEDULED,
+    Complaint.Status.IN_MEDIATION,
     Complaint.Status.IN_PROGRESS,
 ]
 

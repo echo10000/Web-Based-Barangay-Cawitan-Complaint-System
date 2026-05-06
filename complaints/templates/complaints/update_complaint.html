@@ -3,80 +3,305 @@
 {% block content %}
 <div class="page-header page-header-row">
     <div>
-        <h1>Update Complaint</h1>
+        <h1>Update Complaint Workflow</h1>
         <p>{{ complaint.title }}</p>
     </div>
     <a class="btn btn-outline-primary" href="{% url 'complaints:detail' complaint.pk %}">
         <i class="bi bi-arrow-left me-1"></i>Back to Detail
     </a>
 </div>
-<div class="content-card form-card modern-form-card">
-    <div class="form-card-heading">
-        <div class="form-card-icon"><i class="bi bi-clipboard-check-fill"></i></div>
-        <div>
-            <p class="entity-card-title">Complaint Workflow</p>
-            <p class="entity-card-subtitle">Update assignment, priority, status, and resident-facing remarks.</p>
-        </div>
-    </div>
-    {% if staff_assignment_options %}
-        <div class="assignment-advisor mb-4">
-            <div class="assignment-advisor-header">
-                <div>
-                    <p class="assignment-advisor-title">
-                        <i class="bi bi-person-check-fill me-1"></i>Assignment Advisor
-                    </p>
-                    <p class="assignment-advisor-subtitle">Ranked by availability, active workload, overdue work, and category specialization.</p>
-                </div>
+
+{% if staff_assignment_options %}
+    <div class="content-card assignment-advisor mb-4">
+        <div class="assignment-advisor-header">
+            <div>
+                <p class="assignment-advisor-title">
+                    <i class="bi bi-person-check-fill me-1"></i>Assignment Advisor
+                </p>
+                <p class="assignment-advisor-subtitle">Suggested staff based on workload, team, and category fit.</p>
             </div>
-            <div class="assignment-advisor-list">
-                {% for option in staff_assignment_options %}
-                    <div class="assignment-advisor-item">
-                        <div>
-                            <strong>{{ option.user.get_full_name|default:option.user.username }}</strong>
-                            <div class="assignment-advisor-meta">
-                                <span>{{ option.availability }}</span>
+        </div>
+        <div class="assignment-advisor-list">
+            {% for option in staff_assignment_options %}
+                <div class="assignment-advisor-item">
+                    <div>
+                        <strong>{{ option.user.get_full_name|default:option.user.username }}</strong>
+                        <div class="assignment-advisor-meta">
+                            <span>{{ option.availability }}</span>
+                            <span>&middot;</span>
+                            <span>{{ option.team }}</span>
+                            {% if option.specialization_match %}
                                 <span>&middot;</span>
-                                <span>{{ option.team }}</span>
-                                {% if option.specialization_match %}
-                                    <span>&middot;</span>
-                                    <span class="assignment-match">Category match</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="assignment-advisor-counts">
-                            <span>{{ option.active_workload }} active</span>
-                            <span>{{ option.overdue_workload }} overdue</span>
+                                <span class="assignment-match">Category match</span>
+                            {% endif %}
                         </div>
                     </div>
-                {% endfor %}
-            </div>
-        </div>
-    {% endif %}
-    <form method="post" novalidate>
-        {% csrf_token %}
-        <div class="form-section">
-            <div class="form-section-heading">
-                <span>Status & Assignment</span>
-            </div>
-            {% for field in form %}
-                <div class="mb-3">
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}
-                        <div class="form-text">{{ field.help_text }}</div>
-                    {% endif %}
-                    {% for error in field.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
+                    <div class="assignment-advisor-counts">
+                        <span>{{ option.active_workload }} active</span>
+                        <span>{{ option.overdue_workload }} overdue</span>
+                    </div>
                 </div>
             {% endfor %}
         </div>
-        <div class="form-action-bar">
-            <button class="btn btn-success" type="submit">
-                <i class="bi bi-check-circle-fill me-1"></i>Save Update
-            </button>
-            <a class="btn btn-outline-secondary" href="{% url 'complaints:detail' complaint.pk %}">Cancel</a>
+    </div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-clipboard-check-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Status & Assignment</p>
+                    <p class="entity-card-subtitle">Update priority, staff assignment, and public/internal remarks.</p>
+                </div>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="workflow_action" value="complaint">
+                <div class="form-section">
+                    <div class="form-section-heading"><span>Complaint Workflow</span></div>
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-success" type="submit"><i class="bi bi-check-circle-fill me-1"></i>Save Status</button>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-person-lines-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Respondent / Other Party Details</p>
+                    <p class="entity-card-subtitle">Private contact details are visible to staff only.</p>
+                </div>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="workflow_action" value="respondent">
+                <div class="form-section">
+                    <div class="form-section-heading"><span>Respondent Record</span></div>
+                    {% for field in respondent_form %}
+                        <div class="mb-3 {% if field.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                {{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% else %}
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            {% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-success" type="submit"><i class="bi bi-save-fill me-1"></i>Save Respondent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-telephone-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Respondent Contact Tracking</p>
+                    <p class="entity-card-subtitle">Use neutral language. A complaint involving the respondent is under review.</p>
+                </div>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="workflow_action" value="contact">
+                <div class="form-section">
+                    <div class="form-section-heading"><span>Contact Attempt</span></div>
+                    {% for field in contact_form %}
+                        <div class="mb-3 {% if field.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                {{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% else %}
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            {% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1"></i>Record Contact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-chat-left-text-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Respondent Response</p>
+                    <p class="entity-card-subtitle">Manually encode responses received by call, SMS, letter, email, or in person.</p>
+                </div>
+            </div>
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="workflow_action" value="response">
+                <div class="form-section">
+                    <div class="form-section-heading"><span>Response and Evidence</span></div>
+                    {% for field in response_form %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-success" type="submit"><i class="bi bi-save-fill me-1"></i>Record Response</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-calendar-event-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Schedule Hearing / Mediation</p>
+                    <p class="entity-card-subtitle">Scheduling updates the complaint status and notifies the complainant.</p>
+                </div>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="workflow_action" value="hearing">
+                <div class="form-section">
+                    <div class="form-section-heading"><span>Schedule</span></div>
+                    {% for field in hearing_form %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-success" type="submit"><i class="bi bi-calendar-plus-fill me-1"></i>Save Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-people-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Hearing Attendance</p>
+                    <p class="entity-card-subtitle">Record attendance and mediation outcome after a scheduled hearing.</p>
+                </div>
+            </div>
+            {% if attendance_form %}
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="workflow_action" value="attendance">
+                    <div class="form-section">
+                        <div class="form-section-heading"><span>Attendance and Result</span></div>
+                        {% for field in attendance_form %}
+                            <div class="mb-3 {% if field.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+                                {% if field.field.widget.input_type == 'checkbox' %}
+                                    {{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {% else %}
+                                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                {% endif %}
+                                {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-action-bar">
+                        <button class="btn btn-success" type="submit"><i class="bi bi-clipboard2-check-fill me-1"></i>Record Attendance</button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="workflow-empty-state">
+                    <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                    <p class="entity-muted mb-0">Schedule a hearing or mediation before recording attendance.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-envelope-paper-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Second Notice</p>
+                    <p class="entity-card-subtitle">Record a second notice when there is no response or failed attendance.</p>
+                </div>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="workflow_action" value="second_notice">
+                <div class="form-section">
+                    <div class="form-section-heading"><span>Notice Details</span></div>
+                    {% for field in second_notice_form %}
+                        <div class="mb-3 {% if field.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                {{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% else %}
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            {% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-warning" type="submit"><i class="bi bi-envelope-check-fill me-1"></i>Record Second Notice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="content-card form-card modern-form-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-arrow-up-right-circle-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Escalation</p>
+                    <p class="entity-card-subtitle">Escalate unresolved complaints to a higher authority or complaint level.</p>
+                </div>
+            </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="workflow_action" value="escalation">
+                <div class="form-section">
+                    <div class="form-section-heading"><span>Escalation Details</span></div>
+                    {% for field in escalation_form %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-danger" type="submit"><i class="bi bi-arrow-up-right-circle-fill me-1"></i>Escalate Complaint</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Create Staff | Barangay Cawitan{% endblock %}
 {% block content %}
+<div class="account-polish-page account-polish-page--form">
 <div class="page-header page-header-row">
     <div>
         <h1>Create Staff Account</h1>
@@ -18,15 +19,15 @@
             <p class="entity-card-subtitle">Create a secure account and add assignment-ready staff details.</p>
         </div>
     </div>
-    <form method="post" novalidate>
+    <form method="post" class="account-polish-form" novalidate>
         {% csrf_token %}
         <div class="form-section">
             <div class="form-section-heading">
                 <span>Account & Role Details</span>
             </div>
-            <div class="row">
+            <div class="row account-form-grid">
             {% for field in form %}
-                <div class="col-md-6 mb-3">
+                <div class="col-md-6 mb-3 account-form-field">
                     <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
                     {% for error in field.errors %}
@@ -43,5 +44,6 @@
             <a class="btn btn-outline-secondary" href="{% url 'accounts:staff' %}">Cancel</a>
         </div>
     </form>
+</div>
 </div>
 {% endblock %}

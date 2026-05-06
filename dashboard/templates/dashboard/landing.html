@@ -1,4 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/accounts.css' %}">
+{% endblock %}
+
 {% block title %}Barangay Cawitan Complaint Portal{% endblock %}
 {% block content %}
 
@@ -24,6 +30,15 @@
         <div class="landing-panel-top">
             <span></span><span></span><span></span>
         </div>
+        <div class="landing-panel-main">
+            <div class="landing-panel-icon">
+                <i class="bi bi-clipboard2-check-fill"></i>
+            </div>
+            <div>
+                <strong>Complaint Desk</strong>
+                <span>New reports, assignments, and resident updates stay organized from intake to resolution.</span>
+            </div>
+        </div>
         <div class="landing-metrics">
             <div>
                 <strong>24/7</strong>
@@ -47,12 +62,12 @@
         <div class="col-lg-6">
             <p class="eyebrow">About the System</p>
             <h2 class="landing-sec-h2">A digital front desk for the barangay.</h2>
-            <p class="text-muted" style="font-size:16px; line-height:1.75;">
+            <p class="landing-body-copy">
                 The Barangay Cawitan Complaint Management System is an official online
                 platform designed to make it easier for residents to file complaints and
                 for barangay staff to respond to them efficiently.
             </p>
-            <p class="text-muted" style="font-size:16px; line-height:1.75;">
+            <p class="landing-body-copy">
                 No more long waits or unclear processes &mdash; everything is tracked,
                 time-stamped, and visible to the right people.
             </p>
@@ -60,7 +75,7 @@
         <div class="col-lg-6">
             <div class="landing-role-grid">
                 <div class="landing-role-card">
-                    <div class="landing-role-icon" style="background:#EFF6FF; color:#1E3A8A;">
+                    <div class="landing-role-icon landing-role-icon--resident">
                         <i class="bi bi-person-fill"></i>
                     </div>
                     <div>
@@ -69,7 +84,7 @@
                     </div>
                 </div>
                 <div class="landing-role-card">
-                    <div class="landing-role-icon" style="background:#ECFDF5; color:#10B981;">
+                    <div class="landing-role-icon landing-role-icon--staff">
                         <i class="bi bi-person-badge-fill"></i>
                     </div>
                     <div>
@@ -78,7 +93,7 @@
                     </div>
                 </div>
                 <div class="landing-role-card">
-                    <div class="landing-role-icon" style="background:#FEF3C7; color:#D97706;">
+                    <div class="landing-role-icon landing-role-icon--admin">
                         <i class="bi bi-shield-fill"></i>
                     </div>
                     <div>
@@ -96,7 +111,7 @@
     <div class="landing-section-heading">
         <p class="eyebrow">The Process</p>
         <h2 class="landing-sec-h2">How it works</h2>
-        <p class="text-muted mb-4" style="font-size:16px;">
+        <p class="landing-body-copy">
             Filing and resolving a complaint is a straightforward four-step process.
         </p>
     </div>
@@ -136,7 +151,7 @@
     <div class="landing-section-heading">
         <p class="eyebrow">Complaint Categories</p>
         <h2 class="landing-sec-h2">What you can report.</h2>
-        <p class="text-muted mb-4" style="font-size:16px;">
+        <p class="landing-body-copy">
             Select the category that best matches your concern when submitting a complaint.
         </p>
     </div>

@@ -1,45 +1,62 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/accounts.css' %}">
+{% endblock %}
+
 {% block title %}Login | Barangay Cawitan{% endblock %}
+
 {% block content %}
 <div class="auth-wrap">
     <div class="auth-panel">
-        <div class="auth-logo">
-            <i class="bi bi-shield-fill-check"></i>
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="bi bi-shield-fill-check"></i>
+            </div>
+            <div>
+                <h1>Sign in</h1>
+                <p class="auth-subtitle">Barangay Cawitan Complaint Management System</p>
+            </div>
         </div>
-        <h1>Sign in</h1>
-        <p class="auth-subtitle">Barangay Cawitan Complaint Management System</p>
         {% if messages %}
+            <div class="auth-alert-stack">
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
+            </div>
         {% endif %}
-        <form method="post" novalidate>
+        <form class="auth-form" method="post" novalidate>
             {% csrf_token %}
             {% for field in form %}
-                <div class="mb-3">
+                <div class="auth-field">
                     <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
                     {% for error in field.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
+                        <div class="form-error">{{ error }}</div>
                     {% endfor %}
                     {% if field.html_name == "password" %}
-                        <div class="text-end mt-1">
-                            <a class="small text-muted" href="{% url 'accounts:forgot_password' %}">Forgot Password?</a>
+                        <div class="auth-field-link">
+                            <a href="{% url 'accounts:forgot_password' %}">Forgot Password?</a>
                         </div>
                     {% endif %}
                 </div>
             {% endfor %}
             {% if form.non_field_errors %}
-                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                <div class="alert alert-danger auth-form-alert">
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
             {% endif %}
-            <button class="btn btn-primary w-100 mt-1" type="submit">
+            <button class="btn btn-primary w-100 auth-submit" type="submit">
                 <i class="bi bi-box-arrow-in-right me-1"></i>Login
             </button>
         </form>
-        <p class="mt-3 mb-0 text-center" style="font-size:14px;">
+        <p class="auth-switch">
             No account yet? <a href="{% url 'accounts:register' %}">Register as resident</a>
         </p>
     </div>

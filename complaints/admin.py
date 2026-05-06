@@ -1,6 +1,17 @@
 from django.contrib import admin
 
-from .models import Complaint, ComplaintCategory, ComplaintResponse, ComplaintStatusHistory, Notification, UploadedEvidence
+from .models import (
+    Complaint,
+    ComplaintCategory,
+    ComplaintResponse,
+    ComplaintStatusHistory,
+    Escalation,
+    HearingMediation,
+    Notification,
+    Respondent,
+    RespondentEvidence,
+    UploadedEvidence,
+)
 
 
 class UploadedEvidenceInline(admin.TabularInline):
@@ -21,17 +32,49 @@ class ComplaintStatusHistoryInline(admin.TabularInline):
     can_delete = False
 
 
+class RespondentEvidenceInline(admin.TabularInline):
+    model = RespondentEvidence
+    extra = 0
+
+
+class HearingMediationInline(admin.TabularInline):
+    model = HearingMediation
+    extra = 0
+    readonly_fields = ("created_at",)
+
+
 @admin.register(Complaint)
 class ComplaintAdmin(admin.ModelAdmin):
-    list_display = ("title", "resident", "assigned_to", "category", "priority", "status", "deadline_at", "created_at")
-    list_filter = ("priority", "status", "category", "deadline_at", "created_at")
+    list_display = (
+        "title",
+        "resident",
+        "assigned_to",
+        "category",
+        "priority",
+        "status",
+        "privacy_consent",
+        "consented_at",
+        "deadline_at",
+        "created_at",
+    )
+    list_filter = ("priority", "status", "privacy_consent", "category", "deadline_at", "created_at")
     search_fields = ("title", "description", "resident__username", "resident__first_name", "resident__last_name")
-    inlines = [UploadedEvidenceInline, ComplaintResponseInline, ComplaintStatusHistoryInline]
+    inlines = [
+        UploadedEvidenceInline,
+        RespondentEvidenceInline,
+        HearingMediationInline,
+        ComplaintResponseInline,
+        ComplaintStatusHistoryInline,
+    ]
 
 
 admin.site.register(ComplaintCategory)
 admin.site.register(ComplaintResponse)
 admin.site.register(ComplaintStatusHistory)
+admin.site.register(Respondent)
+admin.site.register(RespondentEvidence)
+admin.site.register(HearingMediation)
+admin.site.register(Escalation)
 admin.site.register(UploadedEvidence)
 
 

@@ -2,12 +2,15 @@
 {% block title %}Staff Dashboard | Barangay Cawitan{% endblock %}
 {% block content %}
 
-<div class="page-header page-header-row">
-    <div>
-        <h1>Staff Dashboard</h1>
-        <p>Review assigned complaints, classify concerns, update progress, and keep residents informed.</p>
+<div class="welcome-banner welcome-banner--staff">
+    <div class="welcome-banner-body">
+        <p class="welcome-eyebrow">
+            <i class="bi bi-person-badge-fill me-1"></i>Staff Dashboard
+        </p>
+        <h1 class="welcome-heading">Welcome back, {{ user.get_full_name|default:user.username }}!</h1>
+        <p class="welcome-sub">Review assigned complaints, classify concerns, update progress, and keep residents informed.</p>
     </div>
-    <div class="d-flex flex-wrap gap-2">
+    <div class="welcome-banner-action d-flex flex-wrap gap-2">
         <a class="btn btn-primary" href="{% url 'complaints:list' %}">
             <i class="bi bi-list-check me-1"></i>View Complaints
         </a>
@@ -15,6 +18,7 @@
             <i class="bi bi-person-gear me-1"></i>Edit Profile
         </a>
     </div>
+    <i class="bi bi-person-workspace welcome-banner-deco"></i>
 </div>
 
 <div class="stats-grid admin-stats-grid mt-4">

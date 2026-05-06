@@ -27,7 +27,6 @@
         </div>
     </div>
 
-    {# ── Reminder banner ─────────────────────────── #}
     <div class="submit-reminder">
         <div class="submit-reminder-icon">
             <i class="bi bi-lightbulb-fill"></i>
@@ -47,67 +46,113 @@
             <div class="form-section-heading">
                 <span>Incident Details</span>
             </div>
-        {% for field in form %}
-
-            {# Category — custom tile picker #}
-            {% if field.html_name == 'category' %}
-                <div class="mb-4">
-                    <label class="form-label">{{ field.label }}</label>
-                    {# hidden select keeps the actual POST value #}
-                    <div class="hidden-form-control">{{ field }}</div>
-                    <div class="category-grid" id="category-grid">
-                        {% for choice_value, choice_label in field.field.choices %}
-                            {% if choice_value %}
-                                <div class="category-tile" data-value="{{ choice_value }}">
-                                    <i class="bi bi-tag-fill category-icon"></i>
-                                    <span class="category-label">{{ choice_label }}</span>
-                                    <i class="bi bi-check-circle-fill category-check"></i>
-                                </div>
+            {% for field in form %}
+                {% if field.html_name|slice:":11" != "respondent_" and field.html_name != "privacy_consent" and field.html_name != "accuracy_certification" and field.html_name != "contact_permission" %}
+                    {% if field.html_name == 'category' %}
+                        <div class="mb-4">
+                            <label class="form-label">{{ field.label }}</label>
+                            <div class="hidden-form-control">{{ field }}</div>
+                            <div class="category-grid" id="category-grid">
+                                {% for choice_value, choice_label in field.field.choices %}
+                                    {% if choice_value %}
+                                        <div class="category-tile" data-value="{{ choice_value }}">
+                                            <i class="bi bi-tag-fill category-icon"></i>
+                                            <span class="category-label">{{ choice_label }}</span>
+                                            <i class="bi bi-check-circle-fill category-check"></i>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="category-selected-label" id="category-selected-label">No category selected</div>
+                            {% for error in field.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% elif field.html_name == 'contact_number' %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">
+                                <i class="bi bi-telephone-fill me-1 icon-text-primary"></i>{{ field.label }}
+                            </label>
+                            <div class="contact-input-wrap">
+                                <span class="contact-input-prefix"><i class="bi bi-telephone"></i></span>
+                                {{ field }}
+                            </div>
+                            <div class="form-text">
+                                Provide a number where barangay staff can reach you about this complaint.
+                                {% if field.value %}Pre-filled from your profile. Update if needed.{% endif %}
+                            </div>
+                            {% for error in field.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="form-text">{{ field.help_text }}</div>
                             {% endif %}
+                            {% for error in field.errors %}
+                                <div class="text-danger small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="form-section">
+            <div class="form-section-heading">
+                <span>Respondent / Other Party Information</span>
+            </div>
+            <p class="form-text mb-3">
+                Provide any details you know about the person involved. If you do not know some information,
+                you may leave it blank or write Unknown.
+            </p>
+            {% for field in form %}
+                {% if field.html_name|slice:":11" == "respondent_" %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {% if field.html_name == "respondent_is_known_to_complainant" %}
+                            <div class="d-flex gap-3 flex-wrap">
+                                {% for choice in field %}
+                                    <label class="form-check">
+                                        {{ choice.tag }}
+                                        <span class="form-check-label">{{ choice.choice_label }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
                         {% endfor %}
                     </div>
-                    <div class="category-selected-label" id="category-selected-label">No category selected</div>
-                    {% for error in field.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
-                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
 
-            {# Contact number — phone icon + helper text #}
-            {% elif field.html_name == 'contact_number' %}
-                <div class="mb-3">
-                    <label class="form-label" for="{{ field.id_for_label }}">
-                        <i class="bi bi-telephone-fill me-1 icon-text-primary"></i>{{ field.label }}
-                    </label>
-                    <div class="contact-input-wrap">
-                        <span class="contact-input-prefix"><i class="bi bi-telephone"></i></span>
+        <div class="form-section">
+            <div class="form-section-heading">
+                <span>Data Privacy & Submission Acknowledgement</span>
+            </div>
+            <p class="form-text mb-3">
+                Please read and check each acknowledgement before submitting your complaint.
+                Your information will be used only for barangay complaint handling, mediation, notices, records,
+                and lawful reporting purposes.
+            </p>
+            {% for field in form %}
+                {% if field.html_name == "privacy_consent" or field.html_name == "accuracy_certification" or field.html_name == "contact_permission" %}
+                    <div class="form-check consent-check mb-3">
                         {{ field }}
+                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {% for error in field.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
                     </div>
-                    <div class="form-text">
-                        Provide a number where barangay staff can reach you about this complaint.
-                        {% if field.value %}
-                            Pre-filled from your profile — update if needed.
-                        {% endif %}
-                    </div>
-                    {% for error in field.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
-                </div>
-
-            {# All other fields #}
-            {% else %}
-                <div class="mb-3">
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}
-                        <div class="form-text">{{ field.help_text }}</div>
-                    {% endif %}
-                    {% for error in field.errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-        {% endfor %}
+                {% endif %}
+            {% endfor %}
         </div>
 
         <div class="form-action-bar">

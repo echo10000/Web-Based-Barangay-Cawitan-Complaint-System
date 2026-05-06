@@ -102,6 +102,7 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER", default="")
 
 # Semaphore SMS Configuration
+SMS_WEBHOOK_URL = config("SMS_WEBHOOK_URL", default="")
 SEMAPHORE_API_KEY = config("SEMAPHORE_API_KEY", default="")
 SEMAPHORE_SENDER_NAME = config("SEMAPHORE_SENDER_NAME", default="SEMAPHORE")
 SEMAPHORE_API_URL = "https://api.semaphore.co/api/v4/messages"

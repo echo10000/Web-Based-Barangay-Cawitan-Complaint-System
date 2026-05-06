@@ -82,7 +82,11 @@
                     <strong>{{ row.total }}</strong>
                 </div>
             {% empty %}
-                <p class="entity-muted mb-0">No data yet.</p>
+                <div class="entity-empty report-empty">
+                    <i class="bi bi-pie-chart entity-empty-icon"></i>
+                    <p class="entity-empty-title">No status data yet.</p>
+                    <p class="entity-empty-subtitle">Complaint totals will appear once records match this report.</p>
+                </div>
             {% endfor %}
         </div>
     </div>
@@ -98,7 +102,11 @@
                     <strong>{{ row.total }}</strong>
                 </div>
             {% empty %}
-                <p class="entity-muted mb-0">No data yet.</p>
+                <div class="entity-empty report-empty">
+                    <i class="bi bi-tags entity-empty-icon"></i>
+                    <p class="entity-empty-title">No category data yet.</p>
+                    <p class="entity-empty-subtitle">Category summaries will appear after complaints are submitted.</p>
+                </div>
             {% endfor %}
         </div>
     </div>
@@ -117,7 +125,11 @@
                     <strong>{{ person.total_assigned }}</strong>
                 </div>
             {% empty %}
-                <p class="entity-muted mb-0">No staff yet.</p>
+                <div class="entity-empty report-empty">
+                    <i class="bi bi-person-badge entity-empty-icon"></i>
+                    <p class="entity-empty-title">No staff workload yet.</p>
+                    <p class="entity-empty-subtitle">Assigned complaint counts will appear here.</p>
+                </div>
             {% endfor %}
         </div>
     </div>

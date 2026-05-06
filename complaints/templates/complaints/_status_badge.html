@@ -1,11 +1,35 @@
 {% if status == "PENDING" %}
-    <span class="status-badge status-badge--pending">Pending</span>
+    <span class="status-badge status-badge--pending">Pending Review</span>
 {% elif status == "UNDER_REVIEW" %}
     <span class="status-badge status-badge--under-review">Under Review</span>
+{% elif status == "RESPONDENT_NOT_CONTACTED" %}
+    <span class="status-badge status-badge--pending">Respondent Not Contacted</span>
+{% elif status == "RESPONDENT_CONTACTED" %}
+    <span class="status-badge status-badge--respondent-contacted">Respondent Contacted</span>
+{% elif status == "WAITING_RESPONDENT_RESPONSE" %}
+    <span class="status-badge status-badge--waiting">Waiting for Respondent Response</span>
+{% elif status == "RESPONDENT_RESPONSE_RECORDED" %}
+    <span class="status-badge status-badge--response-recorded">Respondent Response Recorded</span>
+{% elif status == "NO_RESPONSE" %}
+    <span class="status-badge status-badge--no-response">No Response</span>
+{% elif status == "FAILED_TO_ATTEND" %}
+    <span class="status-badge status-badge--failed">Failed to Attend</span>
+{% elif status == "SECOND_NOTICE_SENT" %}
+    <span class="status-badge status-badge--second-notice">Second Notice Sent</span>
+{% elif status == "HEARING_SCHEDULED" %}
+    <span class="status-badge status-badge--hearing">Hearing Scheduled</span>
+{% elif status == "IN_MEDIATION" %}
+    <span class="status-badge status-badge--mediation">In Mediation</span>
 {% elif status == "IN_PROGRESS" %}
     <span class="status-badge status-badge--in-progress">In Progress</span>
 {% elif status == "RESOLVED" %}
     <span class="status-badge status-badge--resolved">Resolved</span>
+{% elif status == "UNRESOLVED" %}
+    <span class="status-badge status-badge--unresolved">Unresolved</span>
+{% elif status == "ESCALATED" %}
+    <span class="status-badge status-badge--escalated">Escalated</span>
+{% elif status == "CLOSED" %}
+    <span class="status-badge status-badge--closed">Closed</span>
 {% elif status == "REJECTED" %}
     <span class="status-badge status-badge--rejected">Rejected</span>
 {% endif %}

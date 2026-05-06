@@ -1,6 +1,7 @@
 import json
 from urllib import request as urlrequest
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.mail import send_mail
@@ -11,9 +12,28 @@ from accounts.models import User
 from .models import Complaint, Notification
 
 
+SMS_TYPE_LABELS = {
+    Notification.Type.GENERAL: "Notification",
+    Notification.Type.SUBMITTED: "Complaint submitted",
+    Notification.Type.ASSIGNED: "Complaint assigned",
+    Notification.Type.STATUS_CHANGED: "Status changed",
+    Notification.Type.REMARKS_ADDED: "Remarks added",
+    Notification.Type.OVERDUE: "Overdue complaint",
+}
+
+
 ACTIVE_ASSIGNMENT_STATUSES = [
     Complaint.Status.PENDING,
     Complaint.Status.UNDER_REVIEW,
+    Complaint.Status.RESPONDENT_NOT_CONTACTED,
+    Complaint.Status.RESPONDENT_CONTACTED,
+    Complaint.Status.WAITING_RESPONDENT_RESPONSE,
+    Complaint.Status.RESPONDENT_RESPONSE_RECORDED,
+    Complaint.Status.NO_RESPONSE,
+    Complaint.Status.FAILED_TO_ATTEND,
+    Complaint.Status.SECOND_NOTICE_SENT,
+    Complaint.Status.HEARING_SCHEDULED,
+    Complaint.Status.IN_MEDIATION,
     Complaint.Status.IN_PROGRESS,
 ]
 
@@ -95,10 +115,17 @@ def get_user_phone_number(user):
     return ""
 
 
+def format_sms_message(notification):
+    label = SMS_TYPE_LABELS.get(notification.notification_type, "Notification")
+    complaint_ref = f" Complaint #{notification.complaint_id}." if notification.complaint_id else ""
+    return f"Barangay Cawitan: {label}.{complaint_ref} {notification.message}".strip()
+
+
 def create_notification(
     *,
     user,
     complaint=None,
+    title="",
     message,
     notification_type=Notification.Type.GENERAL,
     link_target="",
@@ -111,6 +138,7 @@ def create_notification(
     defaults = {
         "notification_type": notification_type,
         "link_target": link_target,
+        "title": title,
     }
     if dedupe:
         notification, created = Notification.objects.get_or_create(
@@ -190,30 +218,49 @@ def deliver_notification_sms(notification, update_fields):
         update_fields.append("sms_status")
         return
 
+    sms_message = format_sms_message(notification)
     sms_webhook_url = getattr(settings, "SMS_WEBHOOK_URL", "")
-    if not sms_webhook_url:
+    semaphore_api_key = getattr(settings, "SEMAPHORE_API_KEY", "")
+    if sms_webhook_url:
+        payload = json.dumps(
+            {
+                "to": phone_number,
+                "message": sms_message,
+                "notification_id": notification.id,
+                "notification_type": notification.notification_type,
+            }
+        ).encode("utf-8")
+        sms_request = urlrequest.Request(
+            sms_webhook_url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+    elif semaphore_api_key:
+        payload = urlencode(
+            {
+                "apikey": semaphore_api_key,
+                "number": phone_number,
+                "message": sms_message,
+                "sendername": getattr(settings, "SEMAPHORE_SENDER_NAME", "SEMAPHORE"),
+            }
+        ).encode("utf-8")
+        sms_request = urlrequest.Request(
+            getattr(settings, "SEMAPHORE_API_URL", "https://api.semaphore.co/api/v4/messages"),
+            data=payload,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+    else:
         notification.sms_status = Notification.DeliveryStatus.NOT_CONFIGURED
-        notification.sms_error = "SMS_WEBHOOK_URL is not configured."
+        notification.sms_error = "SMS_WEBHOOK_URL or SEMAPHORE_API_KEY is not configured."
         update_fields.extend(["sms_status", "sms_error"])
         return
 
-    payload = json.dumps(
-        {
-            "to": phone_number,
-            "message": notification.message,
-            "notification_id": notification.id,
-        }
-    ).encode("utf-8")
-    sms_request = urlrequest.Request(
-        sms_webhook_url,
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
     try:
         with urlrequest.urlopen(sms_request, timeout=10) as response:
             if response.status >= 400:
-                raise HTTPError(sms_webhook_url, response.status, response.reason, response.headers, None)
+                raise HTTPError(sms_request.full_url, response.status, response.reason, response.headers, None)
     except (HTTPError, URLError, TimeoutError, OSError) as exc:
         notification.sms_status = Notification.DeliveryStatus.FAILED
         notification.sms_error = str(exc)
