@@ -40,7 +40,8 @@ class ResidentProfile(models.Model):
     purok = models.CharField(max_length=100, blank=True)
     household_number = models.CharField(max_length=50, blank=True)
     birth_date = models.DateField(null=True, blank=True)
-    valid_id_image = models.ImageField(upload_to="resident_ids/", null=True, blank=True)
+    valid_id_front_image = models.ImageField(upload_to="resident_ids/", null=True, blank=True)
+    valid_id_back_image = models.ImageField(upload_to="resident_ids/", null=True, blank=True)
     verification_status = models.CharField(
         max_length=20,
         choices=VerificationStatus.choices,

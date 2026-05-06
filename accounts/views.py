@@ -16,6 +16,7 @@ from django.utils.crypto import get_random_string
 from .forms import (
     AdminAccountForm,
     LoginForm,
+    ResidentAdminProfileForm,
     ResidentProfileForm,
     ResidentRegistrationForm,
     ResidentVerificationForm,
@@ -237,7 +238,36 @@ def profile_view(request):
     if request.method == "POST" and user_form.is_valid() and (profile_form is None or profile_form.is_valid()):
         user_form.save()
         if profile_form:
-            profile_form.save()
+            profile = profile_form.save()
+            if request.user.is_resident and profile.verification_status in (
+                ResidentProfile.VerificationStatus.UNVERIFIED,
+                ResidentProfile.VerificationStatus.REJECTED,
+            ):
+                has_verification_details = all(
+                    [
+                        request.user.first_name,
+                        request.user.last_name,
+                        request.user.email,
+                        profile.phone_number,
+                        profile.address,
+                        profile.birth_date,
+                        profile.valid_id_front_image,
+                        profile.valid_id_back_image,
+                    ]
+                )
+                if has_verification_details:
+                    profile.verification_status = ResidentProfile.VerificationStatus.PENDING
+                    profile.verification_notes = ""
+                    profile.verified_at = None
+                    profile.verified_by = None
+                    profile.save(
+                        update_fields=[
+                            "verification_status",
+                            "verification_notes",
+                            "verified_at",
+                            "verified_by",
+                        ]
+                    )
         messages.success(request, "Profile updated successfully.")
         return redirect("accounts:profile")
 
@@ -262,7 +292,7 @@ def edit_account_view(request, pk):
     user_form = AdminAccountForm(request.POST or None, instance=account)
     if account.role == User.Role.RESIDENT:
         profile, _ = ResidentProfile.objects.get_or_create(user=account, defaults={"address": ""})
-        profile_form = ResidentProfileForm(request.POST or None, request.FILES or None, instance=profile)
+        profile_form = ResidentAdminProfileForm(request.POST or None, instance=profile)
         verification_data = request.POST if "verify-verification_status" in request.POST else None
         verification_form = ResidentVerificationForm(verification_data, instance=profile, prefix="verify")
         account_type = "Resident"

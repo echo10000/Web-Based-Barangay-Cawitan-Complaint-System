@@ -99,14 +99,44 @@ class AdminAccountForm(forms.ModelForm):
 class ResidentProfileForm(forms.ModelForm):
     class Meta:
         model = ResidentProfile
-        fields = ["phone_number", "address", "purok", "household_number", "birth_date", "valid_id_image"]
+        fields = [
+            "phone_number",
+            "address",
+            "purok",
+            "household_number",
+            "birth_date",
+            "valid_id_front_image",
+            "valid_id_back_image",
+        ]
         widgets = {
             "phone_number": forms.TextInput(attrs={"class": "form-control"}),
             "address": forms.TextInput(attrs={"class": "form-control"}),
             "purok": forms.TextInput(attrs={"class": "form-control"}),
             "household_number": forms.TextInput(attrs={"class": "form-control"}),
             "birth_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-            "valid_id_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "valid_id_front_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "valid_id_back_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+        labels = {
+            "valid_id_front_image": "Valid ID front image",
+            "valid_id_back_image": "Valid ID back image",
+        }
+        help_texts = {
+            "valid_id_front_image": "Upload the front side of your valid ID.",
+            "valid_id_back_image": "Upload the back side of your valid ID.",
+        }
+
+
+class ResidentAdminProfileForm(forms.ModelForm):
+    class Meta:
+        model = ResidentProfile
+        fields = ["phone_number", "address", "purok", "household_number", "birth_date"]
+        widgets = {
+            "phone_number": forms.TextInput(attrs={"class": "form-control"}),
+            "address": forms.TextInput(attrs={"class": "form-control"}),
+            "purok": forms.TextInput(attrs={"class": "form-control"}),
+            "household_number": forms.TextInput(attrs={"class": "form-control"}),
+            "birth_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
         }
 
 

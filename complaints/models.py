@@ -60,6 +60,12 @@ class Complaint(models.Model):
         HIGH = "HIGH", "High"
         URGENT = "URGENT", "Urgent"
 
+    class FeeStatus(models.TextChoices):
+        NOT_REQUIRED = "NOT_REQUIRED", "Not Required"
+        PENDING = "PENDING", "Pending"
+        PAID = "PAID", "Paid"
+        WAIVED = "WAIVED", "Waived"
+
     resident = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="complaints")
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -82,6 +88,18 @@ class Complaint(models.Model):
     consented_at = models.DateTimeField(null=True, blank=True)
     public_remarks = models.TextField(blank=True)
     internal_remarks = models.TextField(blank=True)
+    fee_status = models.CharField(max_length=20, choices=FeeStatus.choices, default=FeeStatus.NOT_REQUIRED)
+    fee_amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    fee_receipt_number = models.CharField(max_length=80, blank=True)
+    fee_paid_at = models.DateField(null=True, blank=True)
+    fee_collected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="collected_complaint_fees",
+    )
+    fee_notes = models.TextField(blank=True)
     second_notice_sent = models.BooleanField(default=False)
     second_notice_date = models.DateField(null=True, blank=True)
     second_notice_method = models.CharField(max_length=50, blank=True)

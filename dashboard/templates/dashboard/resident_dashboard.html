@@ -12,9 +12,15 @@
         <p class="welcome-sub">Track your complaints, submit new concerns, and receive barangay updates.</p>
     </div>
     <div class="welcome-banner-action">
-        <a class="btn btn-success" href="{% url 'complaints:submit' %}">
-            <i class="bi bi-plus-circle-fill me-1"></i>Submit Complaint
-        </a>
+        {% if resident_profile.verification_status == "VERIFIED" %}
+            <a class="btn btn-success" href="{% url 'complaints:submit' %}">
+                <i class="bi bi-plus-circle-fill me-1"></i>Submit Complaint
+            </a>
+        {% else %}
+            <a class="btn btn-outline-light" href="{% url 'accounts:profile' %}">
+                <i class="bi bi-shield-check me-1"></i>Verify Account
+            </a>
+        {% endif %}
     </div>
     <i class="bi bi-person-fill welcome-banner-deco"></i>
 </div>
@@ -34,6 +40,37 @@
         <strong>{{ resolved_count }}</strong>
     </div>
 </div>
+
+{% if resident_profile.verification_status != "VERIFIED" %}
+    <div class="content-card verification-callout mt-4">
+        <div class="verification-callout-icon">
+            <i class="bi bi-shield-exclamation"></i>
+        </div>
+        <div>
+            <p class="verification-callout-title">
+                {% if resident_profile.verification_status == "PENDING" %}
+                    Verification pending
+                {% elif resident_profile.verification_status == "REJECTED" %}
+                    Verification needs update
+                {% else %}
+                    Verify your resident account
+                {% endif %}
+            </p>
+            <p class="verification-callout-text">
+                {% if resident_profile.verification_status == "PENDING" %}
+                    Your profile and valid ID are waiting for admin review. You can submit complaints once approved.
+                {% elif resident_profile.verification_status == "REJECTED" %}
+                    Please update your profile or valid ID, then save again to request another review.
+                {% else %}
+                    Complete your profile and upload the front and back of your valid ID to request verification before submitting complaints.
+                {% endif %}
+            </p>
+        </div>
+        <a class="btn btn-primary btn-sm" href="{% url 'accounts:profile' %}">
+            <i class="bi bi-person-gear me-1"></i>Open Profile
+        </a>
+    </div>
+{% endif %}
 
 {# ── Main content row ────────────────────────────── #}
 <div class="row mt-2">

@@ -66,6 +66,7 @@ def resident_dashboard_view(request):
         return redirect("dashboard:home")
     complaints = Complaint.objects.filter(resident=request.user)
     notifications = Notification.objects.filter(user=request.user)[:5]
+    resident_profile = getattr(request.user, "resident_profile", None)
 
     # Profile completion — 5 fields, each worth 20 %
     profile_fields = [request.user.first_name, request.user.last_name, request.user.email]
@@ -87,6 +88,7 @@ def resident_dashboard_view(request):
             "recent_complaints": complaints[:5],
             "notifications": notifications,
             "profile_completion": profile_completion,
+            "resident_profile": resident_profile,
         },
     )
 

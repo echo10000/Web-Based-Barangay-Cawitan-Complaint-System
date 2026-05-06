@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -130,3 +131,51 @@ class AdminAccountActionTests(TestCase):
         self.assertFalse(self.resident.check_password("ResidentPass123"))
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("Temporary password:", mail.outbox[0].body)
+
+
+class ResidentVerificationRequestTests(TestCase):
+    def setUp(self):
+        self.resident = User.objects.create_user(
+            username="resident",
+            password="ResidentPass123",
+            email="resident@example.com",
+            role=User.Role.RESIDENT,
+            first_name="Juan",
+            last_name="Resident",
+        )
+        ResidentProfile.objects.create(user=self.resident, phone_number="", address="")
+
+    def test_profile_update_with_required_details_requests_verification(self):
+        self.client.force_login(self.resident)
+        valid_id = SimpleUploadedFile(
+            "valid-id.gif",
+            b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+            content_type="image/gif",
+        )
+
+        response = self.client.post(
+            reverse("accounts:profile"),
+            {
+                "first_name": "Juan",
+                "last_name": "Resident",
+                "email": "resident@example.com",
+                "phone_number": "09170000001",
+                "address": "Purok 1-A",
+                "purok": "Purok 1-A",
+                "household_number": "HH-001",
+                "birth_date": "2000-01-02",
+                "valid_id_front_image": valid_id,
+                "valid_id_back_image": SimpleUploadedFile(
+                    "valid-id-back.gif",
+                    b"GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+                    content_type="image/gif",
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.resident.resident_profile.refresh_from_db()
+        self.assertEqual(
+            self.resident.resident_profile.verification_status,
+            ResidentProfile.VerificationStatus.PENDING,
+        )

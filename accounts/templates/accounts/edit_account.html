@@ -60,13 +60,30 @@
                             {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
                         </div>
                     {% endfor %}
-                    {% if account.resident_profile.valid_id_image %}
-                        <div class="col-12">
-                            <a class="btn btn-outline-primary btn-sm" href="{{ account.resident_profile.valid_id_image.url }}" target="_blank">
-                                <i class="bi bi-card-image me-1"></i>View uploaded ID
-                            </a>
+                    <div class="col-12">
+                        <div class="verification-id-review">
+                            <div>
+                                <span class="verification-id-label">Valid ID front</span>
+                                {% if account.resident_profile.valid_id_front_image %}
+                                    <a class="btn btn-outline-primary btn-sm" href="{{ account.resident_profile.valid_id_front_image.url }}" target="_blank">
+                                        <i class="bi bi-card-image me-1"></i>View front
+                                    </a>
+                                {% else %}
+                                    <span class="entity-muted">No front image uploaded.</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="verification-id-label">Valid ID back</span>
+                                {% if account.resident_profile.valid_id_back_image %}
+                                    <a class="btn btn-outline-primary btn-sm" href="{{ account.resident_profile.valid_id_back_image.url }}" target="_blank">
+                                        <i class="bi bi-card-image me-1"></i>View back
+                                    </a>
+                                {% else %}
+                                    <span class="entity-muted">No back image uploaded.</span>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% endif %}
+                    </div>
                 </div>
             </div>
             {% endif %}

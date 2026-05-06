@@ -200,10 +200,17 @@ def submit_complaint_view(request):
     if not request.user.is_resident:
         messages.error(request, "Only residents can submit complaints.")
         return redirect("dashboard:home")
+    try:
+        resident_profile = request.user.resident_profile
+    except Exception:
+        resident_profile = None
+    if not resident_profile or resident_profile.verification_status != resident_profile.VerificationStatus.VERIFIED:
+        messages.error(request, "Your resident account must be verified before you can submit a complaint.")
+        return redirect("accounts:profile")
 
     initial = {}
-    if hasattr(request.user, "resident_profile") and request.user.resident_profile.phone_number:
-        initial["contact_number"] = request.user.resident_profile.phone_number
+    if resident_profile.phone_number:
+        initial["contact_number"] = resident_profile.phone_number
     form = ComplaintForm(request.POST or None, request.FILES or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         complaint = form.save(commit=False)

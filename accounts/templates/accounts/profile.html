@@ -12,6 +12,42 @@
     </a>
 </div>
 
+{% if user.is_resident and profile_form %}
+    <div class="content-card verification-callout mb-4">
+        <div class="verification-callout-icon">
+            <i class="bi bi-shield-check"></i>
+        </div>
+        <div>
+            <p class="verification-callout-title">
+                Verification status:
+                {% if profile_form.instance.verification_status == "VERIFIED" %}
+                    Verified
+                {% elif profile_form.instance.verification_status == "PENDING" %}
+                    Pending review
+                {% elif profile_form.instance.verification_status == "REJECTED" %}
+                    Rejected
+                {% else %}
+                    Unverified
+                {% endif %}
+            </p>
+            <p class="verification-callout-text">
+                {% if profile_form.instance.verification_status == "VERIFIED" %}
+                    Your resident account is verified and can submit complaints.
+                {% elif profile_form.instance.verification_status == "PENDING" %}
+                    Your submitted profile and valid ID are waiting for admin review.
+                {% elif profile_form.instance.verification_status == "REJECTED" %}
+                    Update your details or valid ID, then save again to request another review.
+                {% else %}
+                    Fill in your name, email, phone number, address, birth date, and upload the front and back of your valid ID, then save to request verification.
+                {% endif %}
+            </p>
+            {% if profile_form.instance.verification_notes %}
+                <p class="verification-callout-text"><strong>Admin note:</strong> {{ profile_form.instance.verification_notes }}</p>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
 <div class="content-card form-card modern-form-card">
     <div class="form-card-heading">
         <div class="form-card-icon"><i class="bi bi-person-gear"></i></div>

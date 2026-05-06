@@ -4008,6 +4008,68 @@ button,
     font-size: 16px;
 }
 
+.verification-callout {
+    align-items: flex-start;
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+    display: flex;
+    gap: 14px;
+}
+
+.verification-callout-icon {
+    align-items: center;
+    background: #1E3A8A;
+    border-radius: 12px;
+    color: #FFFFFF;
+    display: inline-flex;
+    flex: 0 0 42px;
+    font-size: 19px;
+    height: 42px;
+    justify-content: center;
+}
+
+.verification-callout-title {
+    color: #0F172A;
+    font-size: 15px;
+    font-weight: 800;
+    margin: 0 0 3px;
+}
+
+.verification-callout-text {
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.verification-id-review {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px;
+}
+
+.verification-id-review > div {
+    align-items: center;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 12px;
+}
+
+.verification-id-label {
+    color: #0F172A;
+    font-size: 13px;
+    font-weight: 800;
+}
+
 .workflow-command {
     display: grid;
     gap: 18px;

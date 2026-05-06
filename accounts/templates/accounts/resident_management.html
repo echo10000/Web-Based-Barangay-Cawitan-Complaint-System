@@ -78,7 +78,7 @@
             <p class="entity-card-subtitle">{{ filtered_count }} resident account{{ filtered_count|pluralize }}{% if search_query %} matching "{{ search_query }}"{% endif %}</p>
         </div>
     </div>
-    <div class="table-responsive" x-data="{ open: null, confirmDeactivate: null }" @keydown.escape.window="open = null; confirmDeactivate = null">
+    <div class="table-responsive" x-data="{ open: null }" @keydown.escape.window="open = null">
         <table class="table align-middle entity-table account-directory-table">
             <thead>
                 <tr>
@@ -190,25 +190,15 @@
                                             </button>
                                         </form>
                                     {% endif %}
-                                    <button type="button" @click="confirmDeactivate = '{{ resident.pk }}'; open = null" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-red-500 hover:!bg-red-50">
-                                        <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                                        <span>{% if resident.is_active %}Deactivate{% else %}Activate{% endif %}</span>
-                                    </button>
-                                </div>
-                                <div x-cloak x-show="confirmDeactivate === '{{ resident.pk }}'" class="!fixed !inset-0 !z-[1060] !flex !items-center !justify-center !bg-black/40 !p-4">
-                                    <div @click.outside="confirmDeactivate = null"
-                                         x-transition
-                                         class="!w-full !max-w-sm !rounded-xl !bg-white !p-5 !shadow-2xl">
-                                        <h2 class="!mb-2 !text-lg !font-semibold !text-gray-900">{% if resident.is_active %}Deactivate resident?{% else %}Activate resident?{% endif %}</h2>
-                                        <p class="!mb-4 !text-sm !text-gray-600">This changes login access for {{ resident.get_full_name|default:resident.username }}.</p>
-                                        <div class="!flex !justify-end !gap-2">
-                                            <button type="button" class="!rounded-lg !border !border-gray-200 !bg-white !px-3 !py-2 !text-sm !text-gray-700 hover:!bg-gray-50" @click="confirmDeactivate = null">Cancel</button>
-                                            <form method="post" action="{% url 'accounts:toggle_account_status' resident.pk %}">
-                                                {% csrf_token %}
-                                                <button type="submit" class="!rounded-lg !bg-red-600 !px-3 !py-2 !text-sm !font-semibold !text-white hover:!bg-red-700">{% if resident.is_active %}Deactivate{% else %}Activate{% endif %}</button>
-                                            </form>
-                                        </div>
-                                    </div>
+                                    <form method="post"
+                                          action="{% url 'accounts:toggle_account_status' resident.pk %}"
+                                          onsubmit="return confirm('This changes login access for {{ resident.get_full_name|default:resident.username|escapejs }}. Continue?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-red-500 hover:!bg-red-50">
+                                            <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                            <span>{% if resident.is_active %}Deactivate{% else %}Activate{% endif %}</span>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </td>

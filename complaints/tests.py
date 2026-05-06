@@ -174,3 +174,22 @@ class ComplaintNotificationTests(TestCase):
         self.assertTrue(notification.is_read)
         self.assertIsNotNone(notification.read_at)
         self.assertFalse(other_notification.is_read)
+
+    def test_unverified_resident_cannot_open_submit_complaint(self):
+        self.resident.resident_profile.verification_status = ResidentProfile.VerificationStatus.UNVERIFIED
+        self.resident.resident_profile.save(update_fields=["verification_status"])
+        self.client.force_login(self.resident)
+
+        response = self.client.get(reverse("complaints:submit"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("accounts:profile"))
+
+    def test_verified_resident_can_open_submit_complaint(self):
+        self.resident.resident_profile.verification_status = ResidentProfile.VerificationStatus.VERIFIED
+        self.resident.resident_profile.save(update_fields=["verification_status"])
+        self.client.force_login(self.resident)
+
+        response = self.client.get(reverse("complaints:submit"))
+
+        self.assertEqual(response.status_code, 200)
