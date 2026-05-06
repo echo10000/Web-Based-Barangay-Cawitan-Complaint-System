@@ -81,6 +81,22 @@
         <strong>{{ staff_count }}</strong>
         <p class="stat-card-desc">Staff in the system</p>
     </div>
+    <div class="stat-card stat-card--pending">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
+            <i class="bi bi-person-check-fill"></i>
+        </div>
+        <span>Pending Verification</span>
+        <strong>{{ pending_verification_count }}</strong>
+        <p class="stat-card-desc">Residents waiting for review</p>
+    </div>
+    <div class="stat-card stat-card--emerald">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-star-fill"></i>
+        </div>
+        <span>Resident Feedback</span>
+        <strong>{{ average_feedback_rating }}/5</strong>
+        <p class="stat-card-desc">{{ feedback_count }} submitted feedback</p>
+    </div>
 </div>
 
 {# ── Charts Row 1: Status donut + Category bar ───── #}
@@ -173,6 +189,41 @@
 </div>
 
 {# ── Recent Complaints ───────────────────────────── #}
+<div class="content-card entity-card mt-3">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Staff Performance</p>
+            <p class="entity-card-subtitle">Active workload, overdue cases, and average resolution time.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle entity-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Active</th>
+                    <th>Resolved</th>
+                    <th>Overdue</th>
+                    <th>Avg. Resolution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in staff_performance %}
+                    <tr>
+                        <td>{{ item.user.get_full_name|default:item.user.username }}</td>
+                        <td>{{ item.active }}</td>
+                        <td>{{ item.resolved }}</td>
+                        <td>{{ item.overdue }}</td>
+                        <td>{{ item.average_resolution_hours }}h</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="text-muted">No staff performance data yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <div class="content-card entity-card mt-3">
     <div class="entity-card-header">
         <div>

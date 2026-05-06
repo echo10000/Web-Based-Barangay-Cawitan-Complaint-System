@@ -4,7 +4,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from accounts.models import User
-from .models import Complaint, Notification
+from .models import ActivityLog, Complaint, Notification
 
 
 ACTIVE_ASSIGNMENT_STATUSES = [
@@ -86,6 +86,26 @@ def get_staff_assignment_options(complaint, limit=8, include_unavailable=True):
 def choose_auto_assignee(complaint):
     options = get_staff_assignment_options(complaint, limit=1, include_unavailable=False)
     return options[0]["user"] if options else None
+
+
+def log_activity(*, actor=None, complaint=None, action, summary, target=None, metadata=None):
+    target_type = ""
+    target_id = None
+    target_repr = ""
+    if target is not None:
+        target_type = target.__class__.__name__
+        target_id = getattr(target, "pk", None)
+        target_repr = str(target)[:255]
+    return ActivityLog.objects.create(
+        actor=actor if getattr(actor, "is_authenticated", True) else None,
+        complaint=complaint,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        target_repr=target_repr,
+        summary=summary,
+        metadata=metadata or {},
+    )
 
 
 def create_notification(

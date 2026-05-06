@@ -2698,6 +2698,55 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     border-color: var(--emerald-dark);
 }
 
+.welcome-banner--staff .welcome-banner-action {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.welcome-banner--staff .welcome-banner-action .btn {
+    align-items: center;
+    border-radius: 8px;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 800;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 16px;
+    position: relative;
+    white-space: nowrap;
+    z-index: 2;
+}
+
+.welcome-banner--staff .welcome-banner-action .btn-primary {
+    background: #102E8A;
+    border-color: #102E8A;
+    box-shadow: 0 10px 20px rgba(15,23,42,.16);
+    color: #FFFFFF;
+}
+
+.welcome-banner--staff .welcome-banner-action .btn-primary:hover,
+.welcome-banner--staff .welcome-banner-action .btn-primary:focus {
+    background: #0F2A78;
+    border-color: #0F2A78;
+    color: #FFFFFF;
+}
+
+.welcome-banner--staff .welcome-banner-action .btn-outline-primary {
+    background: #102E8A;
+    border-color: #102E8A;
+    box-shadow: 0 10px 20px rgba(15,23,42,.16);
+    color: #FFFFFF;
+}
+
+.welcome-banner--staff .welcome-banner-action .btn-outline-primary:hover,
+.welcome-banner--staff .welcome-banner-action .btn-outline-primary:focus {
+    background: #0F2A78;
+    border-color: #0F2A78;
+    color: #FFFFFF;
+}
+
 /* Large decorative icon (background) */
 .welcome-banner-deco {
     bottom: -10px;
@@ -4186,7 +4235,7 @@ button,
     box-shadow: 0 8px 22px rgba(15,23,42,.04);
     display: grid;
     gap: 8px;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     padding: 8px;
     position: sticky;
     top: calc(var(--navbar-h) + 8px);
@@ -4270,6 +4319,149 @@ button,
     font-weight: 800;
     letter-spacing: .08em;
     text-transform: uppercase;
+}
+
+.fee-status-pill {
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 7px 10px;
+    white-space: nowrap;
+}
+
+.fee-status-pill--not_required {
+    background: #E5E7EB;
+    color: #374151;
+}
+
+.fee-status-pill--pending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.fee-status-pill--paid {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.fee-status-pill--waived {
+    background: #E0E7FF;
+    color: #3730A3;
+}
+
+.fee-guidance-card {
+    align-self: start;
+}
+
+.fee-guidance-icon {
+    align-items: center;
+    background: #EFF6FF;
+    border-radius: 12px;
+    color: #1E3A8A;
+    display: inline-flex;
+    font-size: 18px;
+    height: 42px;
+    justify-content: center;
+    margin-bottom: 14px;
+    width: 42px;
+}
+
+.fee-guidance-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.fee-guidance-list div {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    display: grid;
+    gap: 3px;
+    padding: 12px;
+}
+
+.fee-guidance-list strong {
+    color: #0F172A;
+    font-size: 13px;
+}
+
+.fee-guidance-list span {
+    color: #64748B;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.fee-generated-reference {
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    border-radius: 12px;
+    display: grid;
+    gap: 5px;
+    padding: 12px 14px;
+}
+
+.fee-generated-reference span {
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.fee-generated-reference strong {
+    color: #0F172A;
+    font-size: 14px;
+}
+
+.resident-fee-card {
+    display: grid;
+    gap: 16px;
+}
+
+.resident-fee-status {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.resident-fee-status p {
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 10px 0 0;
+}
+
+.resident-fee-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.resident-fee-grid div {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    display: grid;
+    gap: 5px;
+    padding: 12px 14px;
+}
+
+.resident-fee-grid span {
+    color: #64748B;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.resident-fee-grid strong {
+    color: #0F172A;
+    font-size: 14px;
+    line-height: 1.35;
 }
 
 .form-action-bar {
@@ -4463,6 +4655,10 @@ button,
 
     .workflow-tabs,
     .workflow-path {
+        grid-template-columns: 1fr;
+    }
+
+    .resident-fee-grid {
         grid-template-columns: 1fr;
     }
 

@@ -184,11 +184,27 @@ class UploadedEvidence(models.Model):
         RESOLUTION = "RESOLUTION", "Resolution Proof"
         OTHER = "OTHER", "Other"
 
+    class ReviewStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending Review"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        REJECTED = "REJECTED", "Rejected"
+        NEEDS_CLARIFICATION = "NEEDS_CLARIFICATION", "Needs Clarification"
+
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, related_name="evidence_files")
     file = models.FileField(upload_to="complaint_uploads/")
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     evidence_type = models.CharField(max_length=20, choices=EvidenceType.choices, default=EvidenceType.INITIAL)
     description = models.CharField(max_length=255, blank=True)
+    review_status = models.CharField(max_length=30, choices=ReviewStatus.choices, default=ReviewStatus.PENDING)
+    review_remarks = models.CharField(max_length=255, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_evidence_files",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     file_size = models.PositiveIntegerField(default=0)
     content_type = models.CharField(max_length=100, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -265,11 +281,27 @@ class RespondentEvidence(models.Model):
         RESPONSE = "RESPONSE", "Response Attachment"
         OTHER = "OTHER", "Other"
 
+    class ReviewStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending Review"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        REJECTED = "REJECTED", "Rejected"
+        NEEDS_CLARIFICATION = "NEEDS_CLARIFICATION", "Needs Clarification"
+
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, related_name="respondent_evidence_files")
     file = models.FileField(upload_to="respondent_uploads/")
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     evidence_type = models.CharField(max_length=20, choices=EvidenceType.choices, default=EvidenceType.RESPONDENT)
     remarks = models.CharField(max_length=255, blank=True)
+    review_status = models.CharField(max_length=30, choices=ReviewStatus.choices, default=ReviewStatus.PENDING)
+    review_remarks = models.CharField(max_length=255, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_respondent_evidence_files",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     file_size = models.PositiveIntegerField(default=0)
     content_type = models.CharField(max_length=100, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
@@ -341,6 +373,64 @@ class Escalation(models.Model):
 
     def __str__(self):
         return f"Escalation for {self.complaint.title}"
+
+
+class ComplaintFeedback(models.Model):
+    complaint = models.OneToOneField(Complaint, on_delete=models.CASCADE, related_name="feedback")
+    resident = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="complaint_feedback")
+    rating = models.PositiveSmallIntegerField()
+    resolution_accepted = models.BooleanField(default=True)
+    comments = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Feedback for {self.complaint.title}: {self.rating}/5"
+
+
+class ActivityLog(models.Model):
+    class Action(models.TextChoices):
+        ACCOUNT_UPDATED = "ACCOUNT_UPDATED", "Account Updated"
+        ACCOUNT_STATUS_CHANGED = "ACCOUNT_STATUS_CHANGED", "Account Status Changed"
+        PASSWORD_RESET = "PASSWORD_RESET", "Password Reset"
+        RESIDENT_VERIFIED = "RESIDENT_VERIFIED", "Resident Verified"
+        RESIDENT_VERIFICATION_UPDATED = "RESIDENT_VERIFICATION_UPDATED", "Resident Verification Updated"
+        COMPLAINT_SUBMITTED = "COMPLAINT_SUBMITTED", "Complaint Submitted"
+        COMPLAINT_UPDATED = "COMPLAINT_UPDATED", "Complaint Updated"
+        ASSIGNMENT_CHANGED = "ASSIGNMENT_CHANGED", "Assignment Changed"
+        FEE_UPDATED = "FEE_UPDATED", "Fee Updated"
+        EVIDENCE_UPLOADED = "EVIDENCE_UPLOADED", "Evidence Uploaded"
+        EVIDENCE_REVIEWED = "EVIDENCE_REVIEWED", "Evidence Reviewed"
+        HEARING_SCHEDULED = "HEARING_SCHEDULED", "Hearing Scheduled"
+        SECOND_NOTICE_RECORDED = "SECOND_NOTICE_RECORDED", "Second Notice Recorded"
+        ESCALATED = "ESCALATED", "Escalated"
+        FEEDBACK_SUBMITTED = "FEEDBACK_SUBMITTED", "Feedback Submitted"
+        SLA_OVERDUE_FLAGGED = "SLA_OVERDUE_FLAGGED", "SLA Overdue Flagged"
+        NOTICE_GENERATED = "NOTICE_GENERATED", "Notice Generated"
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_logs",
+    )
+    complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE, null=True, blank=True, related_name="activity_logs")
+    action = models.CharField(max_length=40, choices=Action.choices)
+    target_type = models.CharField(max_length=80, blank=True)
+    target_id = models.PositiveIntegerField(null=True, blank=True)
+    target_repr = models.CharField(max_length=255, blank=True)
+    summary = models.CharField(max_length=255)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.summary
 
 
 class Notification(models.Model):

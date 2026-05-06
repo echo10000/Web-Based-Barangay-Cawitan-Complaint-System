@@ -3,13 +3,13 @@ from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Case, Count, IntegerField, Q, When
+from django.db.models import Avg, Case, Count, IntegerField, Q, When
 from django.db.models.expressions import RawSQL
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from accounts.models import StaffProfile, User
-from complaints.models import Complaint, ComplaintCategory, Notification
+from accounts.models import ResidentProfile, StaffProfile, User
+from complaints.models import Complaint, ComplaintCategory, ComplaintFeedback, Notification
 from complaints.services import create_notification
 
 
@@ -264,6 +264,26 @@ def admin_dashboard_view(request):
         status__in=ACTIVE_URGENT_STATUSES,
     ).only("id", "title")
     notify_admins_about_overdue_complaints(overdue_complaints)
+    staff_performance = []
+    for staff in User.objects.filter(role=User.Role.STAFF).select_related("staff_profile").order_by("last_name", "first_name"):
+        assigned = Complaint.objects.filter(assigned_to=staff)
+        active = assigned.filter(status__in=ACTIVE_URGENT_STATUSES)
+        resolved = assigned.filter(status=Complaint.Status.RESOLVED)
+        durations = [
+            (item.resolved_at - item.created_at).total_seconds() / 3600
+            for item in resolved
+            if item.resolved_at
+        ]
+        staff_performance.append(
+            {
+                "user": staff,
+                "active": active.count(),
+                "resolved": resolved.count(),
+                "overdue": sum(1 for item in active if item.is_overdue),
+                "average_resolution_hours": round(sum(durations) / len(durations), 1) if durations else 0,
+            }
+        )
+    feedback_summary = ComplaintFeedback.objects.aggregate(total=Count("id"), average_rating=Avg("rating"))
 
     return render(
         request,
@@ -276,6 +296,13 @@ def admin_dashboard_view(request):
             "urgent_count":       urgent_count,
             "resident_count":     User.objects.filter(role=User.Role.RESIDENT).count(),
             "staff_count":        User.objects.filter(role=User.Role.STAFF).count(),
+            "pending_verification_count": User.objects.filter(
+                role=User.Role.RESIDENT,
+                resident_profile__verification_status=ResidentProfile.VerificationStatus.PENDING,
+            ).count(),
+            "feedback_count": feedback_summary["total"] or 0,
+            "average_feedback_rating": round(feedback_summary["average_rating"], 1) if feedback_summary["average_rating"] else 0,
+            "staff_performance": staff_performance[:6],
             "recent_complaints":  Complaint.objects.select_related("resident", "assigned_to")[:8],
             "urgent_complaints":  urgent_complaints,
             "chart_status":       json.dumps(chart_status),

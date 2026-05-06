@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 from io import BytesIO
 
 from django.contrib import messages
@@ -12,8 +13,11 @@ from django.utils.dateparse import parse_date
 
 from accounts.models import User
 from .forms import (
+    ComplaintFeeForm,
+    ComplaintFeedbackForm,
     ComplaintForm,
     ComplaintCategoryForm,
+    EvidenceReviewForm,
     ComplaintReplyForm,
     ComplaintUpdateForm,
     EscalationForm,
@@ -25,8 +29,10 @@ from .forms import (
     SecondNoticeForm,
 )
 from .models import (
+    ActivityLog,
     Complaint,
     ComplaintCategory,
+    ComplaintFeedback,
     ComplaintReply,
     ComplaintResponse,
     ComplaintStatusHistory,
@@ -37,7 +43,7 @@ from .models import (
     RespondentEvidence,
     UploadedEvidence,
 )
-from .services import choose_auto_assignee, create_notification, get_staff_assignment_options
+from .services import choose_auto_assignee, create_notification, get_staff_assignment_options, log_activity
 
 
 ACTIVE_ASSIGNMENT_STATUSES = [
@@ -113,6 +119,11 @@ def notify_complainant_for_status(complaint, status, fallback_message=None):
     )
 
 
+def generate_fee_receipt_number(complaint):
+    year = timezone.localdate().year
+    return f"FEE-{year}-CMP{complaint.pk:05d}"
+
+
 def get_or_create_respondent(complaint):
     respondent, _ = Respondent.objects.get_or_create(
         complaint=complaint,
@@ -122,7 +133,7 @@ def get_or_create_respondent(complaint):
 
 
 def create_uploaded_evidence(complaint, file, user, evidence_type=UploadedEvidence.EvidenceType.INITIAL, description=""):
-    return UploadedEvidence.objects.create(
+    evidence = UploadedEvidence.objects.create(
         complaint=complaint,
         file=file,
         uploaded_by=user,
@@ -131,6 +142,91 @@ def create_uploaded_evidence(complaint, file, user, evidence_type=UploadedEviden
         file_size=getattr(file, "size", 0) or 0,
         content_type=getattr(file, "content_type", "") or "",
     )
+    log_activity(
+        actor=user,
+        complaint=complaint,
+        action=ActivityLog.Action.EVIDENCE_UPLOADED,
+        target=evidence,
+        summary=f"Evidence uploaded for complaint '{complaint.title}'.",
+    )
+    return evidence
+
+
+def build_complaint_timeline(complaint, *, staff_view=False):
+    timeline = [
+        {
+            "when": complaint.created_at,
+            "title": "Complaint submitted",
+            "body": "The complaint record was created.",
+            "kind": "submitted",
+            "is_public": True,
+        }
+    ]
+    for item in complaint.status_history.all():
+        if not staff_view and not item.public_remarks:
+            continue
+        title = item.get_new_status_display()
+        if staff_view and item.old_status:
+            title = f"{item.get_old_status_display()} to {item.get_new_status_display()}"
+        timeline.append(
+            {
+                "when": item.changed_at,
+                "title": title,
+                "body": item.public_remarks or item.remarks or item.internal_remarks,
+                "actor": item.changed_by,
+                "kind": "status",
+                "is_public": bool(item.public_remarks),
+            }
+        )
+    for hearing in complaint.hearings.all():
+        timeline.append(
+            {
+                "when": timezone.make_aware(
+                    datetime.combine(hearing.date, hearing.time),
+                    timezone.get_current_timezone(),
+                ),
+                "title": "Hearing / mediation scheduled",
+                "body": f"{hearing.purpose} at {hearing.location}. {hearing.remarks}".strip(),
+                "actor": hearing.created_by,
+                "kind": "hearing",
+                "is_public": True,
+            }
+        )
+    if staff_view:
+        for reply in complaint.replies.all():
+            timeline.append(
+                {
+                    "when": reply.created_at,
+                    "title": "Follow-up reply",
+                    "body": reply.message,
+                    "actor": reply.author,
+                    "kind": "reply",
+                    "is_public": reply.is_public,
+                }
+            )
+        for response in complaint.responses.all():
+            timeline.append(
+                {
+                    "when": response.created_at,
+                    "title": response.get_source_display(),
+                    "body": response.remarks,
+                    "actor": response.responder,
+                    "kind": "response",
+                    "is_public": response.is_public,
+                }
+            )
+        for log in complaint.activity_logs.all():
+            timeline.append(
+                {
+                    "when": log.created_at,
+                    "title": log.get_action_display(),
+                    "body": log.summary,
+                    "actor": log.actor,
+                    "kind": "activity",
+                    "is_public": False,
+                }
+            )
+    return sorted(timeline, key=lambda item: item["when"], reverse=True)
 
 
 @login_required
@@ -240,6 +336,13 @@ def submit_complaint_view(request):
         )
         for evidence_file in form.cleaned_data.get("evidence", []):
             create_uploaded_evidence(complaint, evidence_file, request.user)
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.COMPLAINT_SUBMITTED,
+            target=complaint,
+            summary=f"Complaint '{complaint.title}' submitted.",
+        )
         create_notification(
             user=request.user,
             complaint=complaint,
@@ -278,6 +381,7 @@ def complaint_detail_view(request, pk):
             "respondent_evidence_files",
             "responses",
             "replies",
+            "activity_logs",
         ),
         pk=pk,
     )
@@ -294,6 +398,7 @@ def complaint_detail_view(request, pk):
         return redirect("complaints:list")
 
     reply_form = ComplaintReplyForm(request.POST or None, request.FILES or None)
+    feedback_form = ComplaintFeedbackForm(request.POST or None)
     if request.method == "POST" and request.POST.get("workflow_action") == "reply":
         if complaint.is_closed:
             messages.error(request, "This complaint is closed and cannot receive new replies.")
@@ -333,9 +438,61 @@ def complaint_detail_view(request, pk):
             messages.success(request, "Reply added successfully.")
             return redirect(complaint.get_absolute_url())
 
+    if request.method == "POST" and request.POST.get("workflow_action") == "feedback":
+        if request.user != complaint.resident:
+            messages.error(request, "Only the complainant can submit feedback.")
+            return redirect(complaint.get_absolute_url())
+        if complaint.status != Complaint.Status.RESOLVED:
+            messages.error(request, "Feedback can only be submitted after the complaint is resolved.")
+            return redirect(complaint.get_absolute_url())
+        if hasattr(complaint, "feedback"):
+            messages.error(request, "Feedback has already been submitted for this complaint.")
+            return redirect(complaint.get_absolute_url())
+        if feedback_form.is_valid():
+            feedback = feedback_form.save(commit=False)
+            feedback.complaint = complaint
+            feedback.resident = request.user
+            feedback.save()
+            log_activity(
+                actor=request.user,
+                complaint=complaint,
+                action=ActivityLog.Action.FEEDBACK_SUBMITTED,
+                target=feedback,
+                summary=f"Resident feedback submitted for complaint '{complaint.title}'.",
+                metadata={"rating": feedback.rating, "resolution_accepted": feedback.resolution_accepted},
+            )
+            messages.success(request, "Thank you. Your feedback has been recorded.")
+            return redirect(complaint.get_absolute_url())
+
+    if request.method == "POST" and request.POST.get("workflow_action") == "evidence_review":
+        if not (request.user.is_staff_member or request.user.is_barangay_admin):
+            messages.error(request, "Only staff or admins can review evidence.")
+            return redirect(complaint.get_absolute_url())
+        evidence_kind = request.POST.get("evidence_kind")
+        evidence_id = request.POST.get("evidence_id")
+        evidence_model = RespondentEvidence if evidence_kind == "respondent" else UploadedEvidence
+        evidence = get_object_or_404(evidence_model, pk=evidence_id, complaint=complaint)
+        review_form = EvidenceReviewForm(request.POST)
+        if review_form.is_valid():
+            evidence.review_status = review_form.cleaned_data["review_status"]
+            evidence.review_remarks = review_form.cleaned_data["review_remarks"]
+            evidence.reviewed_by = request.user
+            evidence.reviewed_at = timezone.now()
+            evidence.save(update_fields=["review_status", "review_remarks", "reviewed_by", "reviewed_at"])
+            log_activity(
+                actor=request.user,
+                complaint=complaint,
+                action=ActivityLog.Action.EVIDENCE_REVIEWED,
+                target=evidence,
+                summary=f"Evidence marked {evidence.get_review_status_display()} for complaint '{complaint.title}'.",
+            )
+            messages.success(request, "Evidence review saved.")
+            return redirect(complaint.get_absolute_url())
+
     latest_hearing = complaint.hearings.first()
     public_status_history = complaint.status_history.exclude(public_remarks="")
     public_responses = complaint.responses.filter(is_public=True)
+    staff_view = request.user.is_staff_member or request.user.is_barangay_admin
     return render(
         request,
         "complaints/complaint_detail.html",
@@ -345,6 +502,9 @@ def complaint_detail_view(request, pk):
             "public_status_history": public_status_history,
             "public_responses": public_responses,
             "reply_form": reply_form,
+            "feedback_form": feedback_form,
+            "complaint_timeline": build_complaint_timeline(complaint, staff_view=staff_view),
+            "evidence_review_choices": UploadedEvidence.ReviewStatus.choices,
         },
     )
 
@@ -383,6 +543,99 @@ def notification_view_redirect(request, pk):
     return redirect("complaints:notifications")
 
 
+def build_notice_pdf_response(request, complaint, title, lines, filename):
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+    except ImportError:
+        messages.error(request, "PDF generation needs reportlab. Install requirements.txt, then try again.")
+        return None
+
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    _, height = letter
+    y = height - 50
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(50, y, "Barangay Cawitan")
+    y -= 22
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(50, y, title)
+    y -= 30
+    pdf.setFont("Helvetica", 10)
+    for line in lines:
+        if y < 60:
+            pdf.showPage()
+            pdf.setFont("Helvetica", 10)
+            y = height - 50
+        pdf.drawString(50, y, str(line)[:100])
+        y -= 18
+    pdf.save()
+    buffer.seek(0)
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+@staff_or_admin_required
+def complaint_notice_pdf_view(request, pk, notice_type):
+    complaint = get_object_or_404(
+        Complaint.objects.select_related("resident", "assigned_to", "category").prefetch_related("hearings"),
+        pk=pk,
+    )
+    if request.user.is_staff_member and complaint.assigned_to not in (request.user, None):
+        messages.error(request, "You can only generate notices for complaints assigned to you.")
+        return redirect("complaints:list")
+
+    latest_hearing = complaint.hearings.first()
+    respondent = getattr(complaint, "respondent", None)
+    base_lines = [
+        f"Complaint No.: CMP-{complaint.id:03d}",
+        f"Title: {complaint.title}",
+        f"Complainant: {complaint.resident.get_full_name() or complaint.resident.username}",
+        f"Respondent: {respondent.full_name if respondent else 'Unknown'}",
+        f"Category: {complaint.category.name if complaint.category else 'Uncategorized'}",
+        f"Status: {complaint.get_status_display()}",
+        "",
+    ]
+    if notice_type == "hearing":
+        if not latest_hearing:
+            messages.error(request, "Schedule a hearing before generating a hearing notice.")
+            return redirect(complaint.get_absolute_url())
+        title = "Hearing / Mediation Notice"
+        lines = base_lines + [
+            f"Date: {latest_hearing.date:%B %d, %Y}",
+            f"Time: {latest_hearing.time:%I:%M %p}",
+            f"Location: {latest_hearing.location}",
+            f"Purpose: {latest_hearing.purpose}",
+            f"Instructions: {latest_hearing.remarks or 'Please attend on time.'}",
+        ]
+    elif notice_type == "second-notice":
+        title = "Second Notice"
+        lines = base_lines + [
+            f"Notice Date: {complaint.second_notice_date or timezone.localdate()}",
+            f"Method: {complaint.second_notice_method or 'Not recorded'}",
+            f"Remarks: {complaint.second_notice_remarks or 'Second notice recorded by the barangay office.'}",
+        ]
+    else:
+        title = "Complaint Resolution Summary"
+        lines = base_lines + [
+            f"Resolved At: {complaint.resolved_at:%B %d, %Y %I:%M %p}" if complaint.resolved_at else "Resolved At: Not recorded",
+            f"Public Remarks: {complaint.public_remarks or 'No public remarks recorded.'}",
+            f"Escalation: {complaint.escalation.escalated_to if hasattr(complaint, 'escalation') else 'Not escalated'}",
+        ]
+    log_activity(
+        actor=request.user,
+        complaint=complaint,
+        action=ActivityLog.Action.NOTICE_GENERATED,
+        target=complaint,
+        summary=f"{title} generated for complaint '{complaint.title}'.",
+        metadata={"notice_type": notice_type},
+    )
+    response = build_notice_pdf_response(request, complaint, title, lines, f"complaint-{complaint.pk}-{notice_type}.pdf")
+    return response or redirect(complaint.get_absolute_url())
+
+
 def get_workflow_guidance(complaint, action=None):
     action_tabs = {
         "complaint": "assignment",
@@ -393,6 +646,7 @@ def get_workflow_guidance(complaint, action=None):
         "attendance": "hearing",
         "second_notice": "resolution",
         "escalation": "resolution",
+        "fee": "fee",
     }
     status_guidance = {
         Complaint.Status.PENDING: (
@@ -549,6 +803,12 @@ def update_complaint_view(request, pk):
         prefix="response",
     )
     hearing_form = HearingMediationForm(request.POST if action == "hearing" else None, prefix="hearing")
+    fee_form = ComplaintFeeForm(
+        request.POST if action == "fee" else None,
+        instance=complaint,
+        prefix="fee",
+        can_finalize_fee=request.user.is_barangay_admin,
+    )
     attendance_form = (
         HearingAttendanceForm(
             request.POST if action == "attendance" else None,
@@ -591,6 +851,7 @@ def update_complaint_view(request, pk):
                     "attendance_form": attendance_form,
                     "second_notice_form": second_notice_form,
                     "escalation_form": escalation_form,
+                    "fee_form": fee_form,
                     "latest_hearing": latest_hearing,
                     "staff_assignment_options": get_staff_assignment_options(complaint) if request.user.is_barangay_admin else [],
                     **workflow_context,
@@ -657,6 +918,14 @@ def update_complaint_view(request, pk):
                 notification_type=Notification.Type.REMARKS_ADDED,
             )
         if complaint.assigned_to and complaint.assigned_to != old_assigned_to:
+            log_activity(
+                actor=request.user,
+                complaint=complaint,
+                action=ActivityLog.Action.ASSIGNMENT_CHANGED,
+                target=complaint.assigned_to,
+                summary=f"Complaint '{complaint.title}' assigned to {complaint.assigned_to.get_full_name() or complaint.assigned_to.username}.",
+                metadata={"old_assigned_to": old_assigned_to_id if (old_assigned_to_id := getattr(old_assigned_to, "id", None)) else None},
+            )
             create_notification(
                 user=complaint.assigned_to,
                 complaint=complaint,
@@ -672,11 +941,87 @@ def update_complaint_view(request, pk):
                 ),
                 notification_type=Notification.Type.ASSIGNED,
             )
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.COMPLAINT_UPDATED,
+            target=complaint,
+            summary=f"Complaint '{complaint.title}' workflow updated.",
+            metadata={"old_status": old_status, "new_status": complaint.status, "old_priority": old_priority, "new_priority": complaint.priority},
+        )
         messages.success(request, "Complaint updated successfully.")
         return redirect(complaint.get_absolute_url())
 
+    if request.method == "POST" and action == "fee":
+        old_fee_status = complaint.fee_status
+        if request.user.is_staff_member and complaint.fee_status in (Complaint.FeeStatus.PAID, Complaint.FeeStatus.WAIVED):
+            messages.error(request, "Only admins can change a finalized filing fee record.")
+            return redirect(complaint.get_absolute_url())
+        if fee_form.is_valid():
+            complaint = fee_form.save(commit=False)
+            if complaint.fee_status == Complaint.FeeStatus.PAID:
+                complaint.fee_collected_by = request.user
+                if not complaint.fee_receipt_number:
+                    complaint.fee_receipt_number = generate_fee_receipt_number(complaint)
+            elif complaint.fee_status in (Complaint.FeeStatus.NOT_REQUIRED, Complaint.FeeStatus.PENDING):
+                complaint.fee_receipt_number = ""
+                complaint.fee_paid_at = None
+                complaint.fee_collected_by = None
+                if complaint.fee_status in (Complaint.FeeStatus.NOT_REQUIRED, Complaint.FeeStatus.PENDING):
+                    complaint.fee_amount = None
+            elif complaint.fee_status == Complaint.FeeStatus.WAIVED:
+                complaint.fee_receipt_number = ""
+                complaint.fee_paid_at = None
+                complaint.fee_collected_by = None
+            complaint.save(
+                update_fields=[
+                    "fee_status",
+                    "fee_amount",
+                    "fee_receipt_number",
+                    "fee_paid_at",
+                    "fee_collected_by",
+                    "fee_notes",
+                    "updated_at",
+                ]
+            )
+            fee_messages = {
+                Complaint.FeeStatus.PENDING: (
+                    f"Your complaint '{complaint.title}' has a pending filing fee. "
+                    "Please visit the barangay office for official payment and receipt."
+                ),
+                Complaint.FeeStatus.PAID: (
+                    f"Your filing fee for complaint '{complaint.title}' has been recorded"
+                    f"{' with OR No. ' + complaint.fee_receipt_number if complaint.fee_receipt_number else ''}."
+                ),
+                Complaint.FeeStatus.WAIVED: f"Your filing fee for complaint '{complaint.title}' has been waived.",
+            }
+            if complaint.fee_status != old_fee_status and complaint.fee_status in fee_messages:
+                create_notification(
+                    user=complaint.resident,
+                    complaint=complaint,
+                    message=fee_messages[complaint.fee_status],
+                    notification_type=Notification.Type.STATUS_CHANGED,
+                )
+            log_activity(
+                actor=request.user,
+                complaint=complaint,
+                action=ActivityLog.Action.FEE_UPDATED,
+                target=complaint,
+                summary=f"Filing fee changed from {old_fee_status} to {complaint.fee_status}.",
+                metadata={"old_fee_status": old_fee_status, "new_fee_status": complaint.fee_status},
+            )
+            messages.success(request, "Filing fee record updated.")
+            return redirect(complaint.get_absolute_url())
+
     if request.method == "POST" and action == "respondent" and respondent_form.is_valid():
         respondent_form.save()
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.COMPLAINT_UPDATED,
+            target=respondent,
+            summary=f"Respondent details updated for complaint '{complaint.title}'.",
+        )
         messages.success(request, "Respondent details updated.")
         return redirect(complaint.get_absolute_url())
 
@@ -710,6 +1055,13 @@ def update_complaint_view(request, pk):
             internal_remarks=respondent.contact_remarks,
         )
         notify_complainant_for_status(complaint, complaint.status)
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.COMPLAINT_UPDATED,
+            target=respondent,
+            summary=f"Respondent contact recorded for complaint '{complaint.title}'.",
+        )
         messages.success(request, "Respondent contact details recorded.")
         return redirect(complaint.get_absolute_url())
 
@@ -726,7 +1078,7 @@ def update_complaint_view(request, pk):
         respondent.response_statement = response.remarks
         respondent.save(update_fields=["response_status", "response_statement", "updated_at"])
         if response_form.cleaned_data.get("evidence"):
-            RespondentEvidence.objects.create(
+            evidence = RespondentEvidence.objects.create(
                 complaint=complaint,
                 file=response_form.cleaned_data["evidence"],
                 uploaded_by=request.user,
@@ -734,6 +1086,13 @@ def update_complaint_view(request, pk):
                 remarks=response_form.cleaned_data.get("evidence_remarks", ""),
                 file_size=getattr(response_form.cleaned_data["evidence"], "size", 0) or 0,
                 content_type=getattr(response_form.cleaned_data["evidence"], "content_type", "") or "",
+            )
+            log_activity(
+                actor=request.user,
+                complaint=complaint,
+                action=ActivityLog.Action.EVIDENCE_UPLOADED,
+                target=evidence,
+                summary=f"Respondent evidence uploaded for complaint '{complaint.title}'.",
             )
         complaint.status = Complaint.Status.RESPONDENT_RESPONSE_RECORDED
         complaint.save(update_fields=["status", "updated_at"])
@@ -746,6 +1105,13 @@ def update_complaint_view(request, pk):
             internal_remarks=response.remarks,
         )
         notify_complainant_for_status(complaint, complaint.status)
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.COMPLAINT_UPDATED,
+            target=response,
+            summary=f"Respondent response recorded for complaint '{complaint.title}'.",
+        )
         messages.success(request, "Respondent response recorded.")
         return redirect(complaint.get_absolute_url())
 
@@ -767,6 +1133,13 @@ def update_complaint_view(request, pk):
             complaint=complaint,
             message=public_remarks,
             notification_type=Notification.Type.STATUS_CHANGED,
+        )
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.HEARING_SCHEDULED,
+            target=hearing,
+            summary=f"Hearing scheduled for complaint '{complaint.title}' on {hearing.date}.",
         )
         messages.success(request, "Hearing or mediation schedule saved.")
         return redirect(complaint.get_absolute_url())
@@ -798,6 +1171,13 @@ def update_complaint_view(request, pk):
             internal_remarks=hearing.attendance_remarks,
         )
         notify_complainant_for_status(complaint, complaint.status)
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.COMPLAINT_UPDATED,
+            target=hearing,
+            summary=f"Hearing attendance/result recorded for complaint '{complaint.title}'.",
+        )
         messages.success(request, "Attendance and mediation result recorded.")
         return redirect(complaint.get_absolute_url())
 
@@ -818,6 +1198,13 @@ def update_complaint_view(request, pk):
             internal_remarks=complaint.second_notice_remarks,
         )
         notify_complainant_for_status(complaint, complaint.status)
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.SECOND_NOTICE_RECORDED,
+            target=complaint,
+            summary=f"Second notice recorded for complaint '{complaint.title}'.",
+        )
         messages.success(request, "Second notice recorded.")
         return redirect(complaint.get_absolute_url())
 
@@ -839,6 +1226,13 @@ def update_complaint_view(request, pk):
             internal_remarks=escalation.remarks,
         )
         notify_complainant_for_status(complaint, complaint.status)
+        log_activity(
+            actor=request.user,
+            complaint=complaint,
+            action=ActivityLog.Action.ESCALATED,
+            target=escalation,
+            summary=f"Complaint '{complaint.title}' escalated to {escalation.escalated_to}.",
+        )
         messages.success(request, "Complaint escalated.")
         return redirect(complaint.get_absolute_url())
 
@@ -856,6 +1250,7 @@ def update_complaint_view(request, pk):
             "attendance_form": attendance_form,
             "second_notice_form": second_notice_form,
             "escalation_form": escalation_form,
+            "fee_form": fee_form,
             "latest_hearing": latest_hearing,
             "staff_assignment_options": get_staff_assignment_options(complaint) if request.user.is_barangay_admin else [],
             **workflow_context,
@@ -878,11 +1273,66 @@ def get_report_complaints(request):
     date_from = parse_date(request.GET.get("date_from") or "")
     date_to = parse_date(request.GET.get("date_to") or "")
     complaints = Complaint.objects.select_related("category", "resident", "assigned_to")
+    status = request.GET.get("status", "")
+    priority = request.GET.get("priority", "")
+    category = request.GET.get("category", "")
+    assigned_to = request.GET.get("assigned_to", "")
+    fee_status = request.GET.get("fee_status", "")
+    sla_status = request.GET.get("sla_status", "")
+    purok = request.GET.get("purok", "").strip()
+    response_status = request.GET.get("response_status", "")
+    mediation_result = request.GET.get("mediation_result", "")
     if date_from:
         complaints = complaints.filter(created_at__date__gte=date_from)
     if date_to:
         complaints = complaints.filter(created_at__date__lte=date_to)
-    return complaints, date_from, date_to
+    if status:
+        complaints = complaints.filter(status=status)
+    if priority:
+        complaints = complaints.filter(priority=priority)
+    if category:
+        complaints = complaints.filter(category_id=category)
+    if assigned_to:
+        complaints = complaints.filter(assigned_to_id=assigned_to)
+    if fee_status:
+        complaints = complaints.filter(fee_status=fee_status)
+    if purok:
+        complaints = complaints.filter(Q(incident_location__icontains=purok) | Q(resident__resident_profile__purok__icontains=purok))
+    if response_status:
+        complaints = complaints.filter(respondent__response_status=response_status)
+    if mediation_result:
+        complaints = complaints.filter(hearings__mediation_result=mediation_result)
+    if sla_status == "overdue":
+        complaints = complaints.filter(deadline_at__lt=timezone.now()).exclude(
+            status__in=[
+                Complaint.Status.RESOLVED,
+                Complaint.Status.UNRESOLVED,
+                Complaint.Status.ESCALATED,
+                Complaint.Status.CLOSED,
+                Complaint.Status.REJECTED,
+            ]
+        )
+    elif sla_status == "on_track":
+        complaints = complaints.filter(deadline_at__gte=timezone.now()).exclude(
+            status__in=[
+                Complaint.Status.RESOLVED,
+                Complaint.Status.UNRESOLVED,
+                Complaint.Status.ESCALATED,
+                Complaint.Status.CLOSED,
+                Complaint.Status.REJECTED,
+            ]
+        )
+    elif sla_status == "closed":
+        complaints = complaints.filter(
+            status__in=[
+                Complaint.Status.RESOLVED,
+                Complaint.Status.UNRESOLVED,
+                Complaint.Status.ESCALATED,
+                Complaint.Status.CLOSED,
+                Complaint.Status.REJECTED,
+            ]
+        )
+    return complaints.distinct(), date_from, date_to
 
 
 @login_required
@@ -901,6 +1351,26 @@ def reports_view(request):
         .annotate(total_assigned=Count("assigned_complaints", filter=Q(assigned_complaints__in=complaints)))
         .order_by("last_name", "first_name")
     )
+    staff_performance = []
+    for person in staff_workload:
+        assigned = complaints.filter(assigned_to=person)
+        resolved = assigned.filter(status=Complaint.Status.RESOLVED)
+        durations = [
+            (item.resolved_at - item.created_at).total_seconds() / 3600
+            for item in resolved
+            if item.resolved_at
+        ]
+        active = assigned.filter(status__in=ACTIVE_ASSIGNMENT_STATUSES)
+        staff_performance.append(
+            {
+                "user": person,
+                "assigned": assigned.count(),
+                "active": active.count(),
+                "resolved": resolved.count(),
+                "overdue": sum(1 for item in active if item.is_overdue),
+                "average_resolution_hours": round(sum(durations) / len(durations), 1) if durations else 0,
+            }
+        )
     total_complaints = complaints.count()
     resolved_count = complaints.filter(status=Complaint.Status.RESOLVED).count()
     pending_count = complaints.filter(status=Complaint.Status.PENDING).count()
@@ -911,6 +1381,11 @@ def reports_view(request):
     average_resolution = resolved_with_duration.aggregate(value=Avg("resolution_duration"))["value"]
     average_resolution_hours = round(average_resolution.total_seconds() / 3600, 1) if average_resolution else 0
     by_location = complaints.values("incident_location").annotate(total=Count("id")).order_by("-total")[:10]
+    feedback_summary = ComplaintFeedback.objects.filter(complaint__in=complaints).aggregate(
+        total=Count("id"),
+        average_rating=Avg("rating"),
+    )
+    accepted_feedback_count = ComplaintFeedback.objects.filter(complaint__in=complaints, resolution_accepted=True).count()
     return render(
         request,
         "complaints/reports.html",
@@ -918,6 +1393,7 @@ def reports_view(request):
             "by_status": by_status,
             "by_category": by_category,
             "staff_workload": staff_workload,
+            "staff_performance": staff_performance,
             "total_complaints": total_complaints,
             "resolved_count": resolved_count,
             "pending_count": pending_count,
@@ -926,6 +1402,26 @@ def reports_view(request):
             "by_location": by_location,
             "date_from": request.GET.get("date_from", ""),
             "date_to": request.GET.get("date_to", ""),
+            "query_string": request.GET.urlencode(),
+            "status_choices": Complaint.Status.choices,
+            "priority_choices": Complaint.Priority.choices,
+            "fee_status_choices": Complaint.FeeStatus.choices,
+            "category_choices": ComplaintCategory.objects.filter(is_active=True).order_by("name"),
+            "staff_choices": User.objects.filter(role=User.Role.STAFF, is_active=True).order_by("last_name", "first_name"),
+            "response_status_choices": Respondent.ResponseStatus.choices,
+            "mediation_result_choices": HearingMediation.MediationResult.choices,
+            "selected_status": request.GET.get("status", ""),
+            "selected_priority": request.GET.get("priority", ""),
+            "selected_category": request.GET.get("category", ""),
+            "selected_assigned_to": request.GET.get("assigned_to", ""),
+            "selected_fee_status": request.GET.get("fee_status", ""),
+            "selected_sla_status": request.GET.get("sla_status", ""),
+            "selected_purok": request.GET.get("purok", ""),
+            "selected_response_status": request.GET.get("response_status", ""),
+            "selected_mediation_result": request.GET.get("mediation_result", ""),
+            "feedback_count": feedback_summary["total"] or 0,
+            "average_feedback_rating": round(feedback_summary["average_rating"], 1) if feedback_summary["average_rating"] else 0,
+            "accepted_feedback_count": accepted_feedback_count,
         },
     )
 

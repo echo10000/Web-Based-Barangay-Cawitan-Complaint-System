@@ -7,10 +7,10 @@
         <p>Complaint summaries, workload visibility, and print-ready monitoring.</p>
     </div>
     <div class="d-flex gap-2">
-        <a class="btn btn-outline-primary" href="{% url 'complaints:reports_export_csv' %}?date_from={{ date_from }}&date_to={{ date_to }}">
+        <a class="btn btn-outline-primary" href="{% url 'complaints:reports_export_csv' %}?{{ query_string }}">
             <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i>Export CSV
         </a>
-        <a class="btn btn-outline-primary" href="{% url 'complaints:reports_export_pdf' %}?date_from={{ date_from }}&date_to={{ date_to }}">
+        <a class="btn btn-outline-primary" href="{% url 'complaints:reports_export_pdf' %}?{{ query_string }}">
             <i class="bi bi-file-earmark-pdf-fill me-1"></i>Export PDF
         </a>
         <button class="btn btn-primary" onclick="window.print()">
@@ -29,11 +29,73 @@
             <label class="form-label" for="date-to">To</label>
             <input id="date-to" class="form-control" type="date" name="date_to" value="{{ date_to }}">
         </div>
+        <div>
+            <label class="form-label" for="report-status">Status</label>
+            <select id="report-status" class="form-select" name="status">
+                <option value="">All statuses</option>
+                {% for value,label in status_choices %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="report-priority">Priority</label>
+            <select id="report-priority" class="form-select" name="priority">
+                <option value="">All priorities</option>
+                {% for value,label in priority_choices %}<option value="{{ value }}" {% if selected_priority == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="report-category">Category</label>
+            <select id="report-category" class="form-select" name="category">
+                <option value="">All categories</option>
+                {% for category in category_choices %}<option value="{{ category.pk }}" {% if selected_category == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="report-staff">Staff</label>
+            <select id="report-staff" class="form-select" name="assigned_to">
+                <option value="">All staff</option>
+                {% for staff in staff_choices %}<option value="{{ staff.pk }}" {% if selected_assigned_to == staff.pk|stringformat:"s" %}selected{% endif %}>{{ staff.get_full_name|default:staff.username }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="report-fee">Fee</label>
+            <select id="report-fee" class="form-select" name="fee_status">
+                <option value="">All fee statuses</option>
+                {% for value,label in fee_status_choices %}<option value="{{ value }}" {% if selected_fee_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="report-sla">SLA</label>
+            <select id="report-sla" class="form-select" name="sla_status">
+                <option value="">All SLA states</option>
+                <option value="on_track" {% if selected_sla_status == "on_track" %}selected{% endif %}>On track</option>
+                <option value="overdue" {% if selected_sla_status == "overdue" %}selected{% endif %}>Overdue</option>
+                <option value="closed" {% if selected_sla_status == "closed" %}selected{% endif %}>Closed</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="report-purok">Purok</label>
+            <input id="report-purok" class="form-control" type="search" name="purok" value="{{ selected_purok }}" placeholder="Purok or location">
+        </div>
+        <div>
+            <label class="form-label" for="report-response">Respondent</label>
+            <select id="report-response" class="form-select" name="response_status">
+                <option value="">All response states</option>
+                {% for value,label in response_status_choices %}<option value="{{ value }}" {% if selected_response_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="report-mediation">Mediation</label>
+            <select id="report-mediation" class="form-select" name="mediation_result">
+                <option value="">All results</option>
+                {% for value,label in mediation_result_choices %}<option value="{{ value }}" {% if selected_mediation_result == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
         <div class="entity-toolbar-actions">
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-funnel-fill me-1"></i>Apply
             </button>
-            {% if date_from or date_to %}
+            {% if query_string %}
                 <a class="btn btn-outline-secondary" href="{% url 'complaints:reports' %}">Clear</a>
             {% endif %}
         </div>
@@ -80,6 +142,14 @@
         <span>Avg. Resolution</span>
         <strong>{{ average_resolution_hours }}h</strong>
         <p class="stat-card-desc">Based on resolved records</p>
+    </div>
+    <div class="stat-card stat-card--emerald">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--emerald">
+            <i class="bi bi-star-fill"></i>
+        </div>
+        <span>Feedback</span>
+        <strong>{{ average_feedback_rating }}/5</strong>
+        <p class="stat-card-desc">{{ feedback_count }} response{{ feedback_count|pluralize }}, {{ accepted_feedback_count }} accepted</p>
     </div>
 </div>
 
@@ -166,6 +236,29 @@
                     <i class="bi bi-geo entity-empty-icon"></i>
                     <p class="entity-empty-title">No location data yet.</p>
                     <p class="entity-empty-subtitle">Location summaries will appear after complaints are submitted.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="content-card report-panel h-100">
+            <div class="report-panel-header">
+                <div class="section-title mb-0"><i class="bi bi-speedometer2 me-1"></i>Staff Performance</div>
+                <span class="report-panel-sub">Resolution speed and overdue risk</span>
+            </div>
+            {% for item in staff_performance %}
+                <div class="report-row report-row--bar">
+                    <span>
+                        {{ item.user.get_full_name|default:item.user.username }}
+                        <small>{{ item.active }} active, {{ item.overdue }} overdue, {{ item.average_resolution_hours }}h avg.</small>
+                    </span>
+                    <strong>{{ item.resolved }}</strong>
+                </div>
+            {% empty %}
+                <div class="entity-empty report-empty">
+                    <i class="bi bi-person-badge entity-empty-icon"></i>
+                    <p class="entity-empty-title">No staff performance yet.</p>
+                    <p class="entity-empty-subtitle">Performance metrics appear when staff have assigned complaints.</p>
                 </div>
             {% endfor %}
         </div>

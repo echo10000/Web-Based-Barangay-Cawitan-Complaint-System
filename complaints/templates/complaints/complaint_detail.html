@@ -12,6 +12,15 @@
             <a class="btn btn-success" href="{% url 'complaints:update' complaint.pk %}">
                 <i class="bi bi-pencil-fill me-1"></i>Update Workflow
             </a>
+            <a class="btn btn-outline-primary" href="{% url 'complaints:notice_pdf' complaint.pk 'hearing' %}">
+                <i class="bi bi-file-earmark-pdf-fill me-1"></i>Hearing Notice
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'complaints:notice_pdf' complaint.pk 'second-notice' %}">
+                <i class="bi bi-envelope-paper-fill me-1"></i>Second Notice
+            </a>
+            <a class="btn btn-outline-primary" href="{% url 'complaints:notice_pdf' complaint.pk 'summary' %}">
+                <i class="bi bi-printer-fill me-1"></i>Summary
+            </a>
         {% endif %}
         {% if user.is_barangay_admin %}
             <a class="btn btn-outline-danger" href="{% url 'complaints:delete' complaint.pk %}">
@@ -85,6 +94,13 @@
                 <dd class="col-sm-8">{{ complaint.incident_date|default:"Not provided" }}</dd>
                 <dt class="col-sm-4">Current Status</dt>
                 <dd class="col-sm-8">{% include "complaints/_status_badge.html" with status=complaint.status %}</dd>
+                <dt class="col-sm-4">Filing Fee</dt>
+                <dd class="col-sm-8">
+                    <span class="fee-status-pill fee-status-pill--{{ complaint.fee_status|lower }}">{{ complaint.get_fee_status_display }}</span>
+                    {% if complaint.fee_status == "PAID" and complaint.fee_receipt_number %}
+                        <span class="text-muted ms-1">{{ complaint.fee_receipt_number }}</span>
+                    {% endif %}
+                </dd>
                 {% if complaint.resolved_at %}
                     <dt class="col-sm-4">Resolved Date</dt>
                     <dd class="col-sm-8">{{ complaint.resolved_at|date:"M d, Y h:i A" }}</dd>
@@ -96,6 +112,13 @@
                     <dd class="col-sm-8">{{ complaint.contact_number|default:"Not provided" }}</dd>
                     <dt class="col-sm-4">Assigned Staff</dt>
                     <dd class="col-sm-8">{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</dd>
+                    <dt class="col-sm-4">Fee Details</dt>
+                    <dd class="col-sm-8">
+                        {% if complaint.fee_amount %}Amount: PHP {{ complaint.fee_amount }}<br>{% endif %}
+                        {% if complaint.fee_paid_at %}Paid Date: {{ complaint.fee_paid_at|date:"M d, Y" }}<br>{% endif %}
+                        {% if complaint.fee_collected_by %}Collected By: {{ complaint.fee_collected_by.get_full_name|default:complaint.fee_collected_by.username }}<br>{% endif %}
+                        {% if complaint.fee_notes %}Notes: {{ complaint.fee_notes|linebreaksbr }}{% else %}<span class="text-muted">No fee notes.</span>{% endif %}
+                    </dd>
                     <dt class="col-sm-4">Privacy Consent</dt>
                     <dd class="col-sm-8">
                         {{ complaint.privacy_consent|yesno:"Accepted,Not accepted" }}
@@ -132,41 +155,95 @@
             </div>
         {% endif %}
 
+        <div class="content-card mt-4 resident-fee-card">
+            <div class="section-title"><i class="bi bi-receipt-cutoff me-1"></i>Filing Fee Record</div>
+            <div class="resident-fee-status">
+                <span class="fee-status-pill fee-status-pill--{{ complaint.fee_status|lower }}">{{ complaint.get_fee_status_display }}</span>
+                {% if complaint.fee_status == "PENDING" %}
+                    <p>Please visit the barangay office for official payment and receipt.</p>
+                {% elif complaint.fee_status == "PAID" %}
+                    <p>Your filing fee has been recorded by the barangay office.</p>
+                {% elif complaint.fee_status == "WAIVED" %}
+                    <p>Your filing fee has been waived by the barangay office.</p>
+                {% else %}
+                    <p>No filing fee is currently required for this complaint.</p>
+                {% endif %}
+            </div>
+            <div class="resident-fee-grid">
+                {% if complaint.fee_amount %}
+                    <div>
+                        <span>Amount</span>
+                        <strong>PHP {{ complaint.fee_amount }}</strong>
+                    </div>
+                {% endif %}
+                {% if complaint.fee_receipt_number %}
+                    <div>
+                        <span>Receipt / Reference No.</span>
+                        <strong>{{ complaint.fee_receipt_number }}</strong>
+                    </div>
+                {% endif %}
+                {% if complaint.fee_paid_at %}
+                    <div>
+                        <span>Payment Date</span>
+                        <strong>{{ complaint.fee_paid_at|date:"M d, Y" }}</strong>
+                    </div>
+                {% endif %}
+                {% if complaint.fee_status == "WAIVED" and complaint.fee_notes %}
+                    <div>
+                        <span>Waiver Note</span>
+                        <strong>{{ complaint.fee_notes }}</strong>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="content-card mt-4">
             <div class="section-title"><i class="bi bi-clock-history me-1"></i>{% if user.is_staff_member or user.is_barangay_admin %}Full Timeline{% else %}Complaint Timeline{% endif %}</div>
-            {% if user.is_staff_member or user.is_barangay_admin %}
-                {% for item in complaint.status_history.all %}
-                    <div class="timeline-item">
-                        <strong>
-                            {% if item.old_status %}{{ item.get_old_status_display }} to {{ item.get_new_status_display }}{% else %}{{ item.get_new_status_display }}{% endif %}
-                        </strong>
-                        <small>
-                            {{ item.changed_at|date:"M d, Y h:i A" }}
-                            {% if item.changed_by %}by {{ item.changed_by.get_full_name|default:item.changed_by.username }}{% endif %}
-                        </small>
-                        {% if item.public_remarks %}<p><strong>Public:</strong> {{ item.public_remarks|linebreaksbr }}</p>{% endif %}
-                        {% if item.internal_remarks %}<p><strong>Internal:</strong> {{ item.internal_remarks|linebreaksbr }}</p>{% endif %}
-                        {% if item.remarks %}<p>{{ item.remarks|linebreaks }}</p>{% endif %}
-                    </div>
-                {% empty %}
-                    <p class="entity-muted mb-0">No status history yet.</p>
-                {% endfor %}
-            {% else %}
-                {% for item in public_status_history %}
-                    <div class="timeline-item">
-                        <strong>{{ item.get_new_status_display }}</strong>
-                        <small>{{ item.changed_at|date:"M d, Y h:i A" }}</small>
-                        <p>{{ item.public_remarks|linebreaks }}</p>
-                    </div>
-                {% empty %}
-                    <div class="timeline-item">
-                        <strong>Complaint submitted</strong>
-                        <small>{{ complaint.created_at|date:"M d, Y h:i A" }}</small>
-                        <p>Your complaint has been submitted successfully.</p>
-                    </div>
-                {% endfor %}
-            {% endif %}
+            {% for item in complaint_timeline %}
+                <div class="timeline-item">
+                    <strong>{{ item.title }}</strong>
+                    <small>
+                        {{ item.when|date:"M d, Y h:i A" }}
+                        {% if item.actor %}by {{ item.actor.get_full_name|default:item.actor.username }}{% endif %}
+                        {% if user.is_staff_member or user.is_barangay_admin %}
+                            <span class="ms-1 text-muted">{{ item.kind|title }}</span>
+                        {% endif %}
+                    </small>
+                    {% if item.body %}<p>{{ item.body|linebreaks }}</p>{% endif %}
+                </div>
+            {% empty %}
+                <p class="entity-muted mb-0">No timeline activity yet.</p>
+            {% endfor %}
         </div>
+
+        {% if user == complaint.resident and complaint.status == "RESOLVED" and not complaint.feedback %}
+            <div class="content-card mt-4">
+                <div class="section-title"><i class="bi bi-star-fill me-1"></i>Resolution Feedback</div>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="workflow_action" value="feedback">
+                    {% for field in feedback_form %}
+                        <div class="mb-3 {% if field.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                {{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% else %}
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                            {% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-send-fill me-1"></i>Submit Feedback</button>
+                </form>
+            </div>
+        {% elif complaint.feedback %}
+            <div class="content-card mt-4">
+                <div class="section-title"><i class="bi bi-star-fill me-1"></i>Resolution Feedback</div>
+                <p class="mb-1"><strong>{{ complaint.feedback.rating }}/5</strong> rating</p>
+                <p class="mb-1">Resolution {{ complaint.feedback.resolution_accepted|yesno:"accepted,not accepted" }}.</p>
+                {% if complaint.feedback.comments %}<p class="mb-0">{{ complaint.feedback.comments|linebreaks }}</p>{% endif %}
+            </div>
+        {% endif %}
 
         {% if user.is_staff_member or user.is_barangay_admin %}
             <div class="content-card mt-4">
@@ -286,6 +363,7 @@
                 <div class="summary-item"><span>Category</span><strong>{{ complaint.category.name|default:"Uncategorized" }}</strong></div>
                 <div class="summary-item"><span>Priority</span><strong>{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</strong></div>
                 <div class="summary-item"><span>Submitted</span><strong>{{ complaint.created_at|date:"M d, Y" }}</strong></div>
+                <div class="summary-item"><span>Filing Fee</span><strong><span class="fee-status-pill fee-status-pill--{{ complaint.fee_status|lower }}">{{ complaint.get_fee_status_display }}</span></strong></div>
                 {% if complaint.escalation and user.is_staff_member or complaint.escalation and user.is_barangay_admin %}
                     <div class="summary-item"><span>Escalated To</span><strong>{{ complaint.escalation.escalated_to }}</strong></div>
                 {% elif complaint.escalation %}
@@ -313,9 +391,33 @@
                     <span>
                         <strong>{{ evidence.file.name }}</strong>
                         <small>{{ evidence.get_evidence_type_display }}{% if evidence.description %} - {{ evidence.description }}{% endif %}</small>
+                        <small>Review: {{ evidence.get_review_status_display }}{% if evidence.review_remarks %} - {{ evidence.review_remarks }}{% endif %}</small>
                     </span>
                     <i class="bi bi-box-arrow-up-right ms-auto"></i>
                 </a>
+                {% if user.is_staff_member or user.is_barangay_admin %}
+                    <form method="post" class="evidence-review-form mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="workflow_action" value="evidence_review">
+                        <input type="hidden" name="evidence_kind" value="complainant">
+                        <input type="hidden" name="evidence_id" value="{{ evidence.pk }}">
+                        <div class="row g-2">
+                            <div class="col-5">
+                                <select class="form-select form-select-sm" name="review_status">
+                                    {% for value,label in evidence_review_choices %}
+                                        <option value="{{ value }}" {% if evidence.review_status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col">
+                                <input class="form-control form-control-sm" name="review_remarks" value="{{ evidence.review_remarks }}" placeholder="Review note">
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Save</button>
+                            </div>
+                        </div>
+                    </form>
+                {% endif %}
             {% empty %}
                 <div class="entity-empty evidence-empty">
                     <i class="bi bi-paperclip entity-empty-icon"></i>
@@ -332,9 +434,31 @@
                         <span>
                             <strong>{{ evidence.file.name }}</strong>
                             <small>{{ evidence.remarks|default:"Respondent file" }}</small>
+                            <small>Review: {{ evidence.get_review_status_display }}{% if evidence.review_remarks %} - {{ evidence.review_remarks }}{% endif %}</small>
                         </span>
                         <i class="bi bi-box-arrow-up-right ms-auto"></i>
                     </a>
+                    <form method="post" class="evidence-review-form mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="workflow_action" value="evidence_review">
+                        <input type="hidden" name="evidence_kind" value="respondent">
+                        <input type="hidden" name="evidence_id" value="{{ evidence.pk }}">
+                        <div class="row g-2">
+                            <div class="col-5">
+                                <select class="form-select form-select-sm" name="review_status">
+                                    {% for value,label in evidence_review_choices %}
+                                        <option value="{{ value }}" {% if evidence.review_status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col">
+                                <input class="form-control form-control-sm" name="review_remarks" value="{{ evidence.review_remarks }}" placeholder="Review note">
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Save</button>
+                            </div>
+                        </div>
+                    </form>
                 {% empty %}
                     <div class="entity-empty evidence-empty">
                         <i class="bi bi-file-earmark entity-empty-icon"></i>

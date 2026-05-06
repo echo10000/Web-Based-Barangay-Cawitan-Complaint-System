@@ -10,6 +10,7 @@ urlpatterns = [
     path("notifications/", views.notifications_view, name="notifications"),
     path("notifications/mark-all-read/", views.mark_all_notifications_read_view, name="mark_all_notifications_read"),
     path("notifications/<int:pk>/view/", views.notification_view_redirect, name="notification_view"),
+    path("<int:pk>/notices/<str:notice_type>/", views.complaint_notice_pdf_view, name="notice_pdf"),
     path("<int:pk>/", views.complaint_detail_view, name="detail"),
     path("<int:pk>/update/", views.update_complaint_view, name="update"),
     path("<int:pk>/delete/", views.delete_complaint_view, name="delete"),

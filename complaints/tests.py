@@ -1,9 +1,29 @@
+import sys
+from copy import copy
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.template.context import BaseContext, Context, RequestContext
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import ResidentProfile, StaffProfile, User
-from .models import Complaint, ComplaintCategory, Notification, Respondent
+from .models import ActivityLog, Complaint, ComplaintCategory, ComplaintFeedback, Notification, Respondent, UploadedEvidence
+
+
+if sys.version_info >= (3, 14):
+    def _copy_template_context(context):
+        duplicate = object.__new__(context.__class__)
+        duplicate.__dict__.update(context.__dict__)
+        duplicate.dicts = context.dicts[:]
+        if hasattr(context, "render_context"):
+            duplicate.render_context = copy(context.render_context)
+        return duplicate
+
+    BaseContext.__copy__ = _copy_template_context
+    Context.__copy__ = _copy_template_context
+    RequestContext.__copy__ = _copy_template_context
 
 
 @override_settings(
@@ -106,6 +126,133 @@ class ComplaintNotificationTests(TestCase):
             ).exists()
         )
 
+    def test_admin_records_paid_filing_fee_and_notifies_resident(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("complaints:update", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "fee",
+                "fee-fee_status": Complaint.FeeStatus.PAID,
+                "fee-fee_amount": "50.00",
+                "fee-fee_paid_at": timezone.localdate().isoformat(),
+                "fee-fee_notes": "Official receipt issued.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.complaint.refresh_from_db()
+        self.assertEqual(self.complaint.fee_status, Complaint.FeeStatus.PAID)
+        self.assertEqual(str(self.complaint.fee_amount), "50.00")
+        self.assertEqual(self.complaint.fee_receipt_number, f"FEE-{timezone.localdate().year}-CMP{self.complaint.pk:05d}")
+        self.assertEqual(self.complaint.fee_collected_by, self.admin)
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.resident,
+                complaint=self.complaint,
+                message__contains=self.complaint.fee_receipt_number,
+            ).exists()
+        )
+
+    def test_staff_can_only_mark_filing_fee_pending(self):
+        self.client.force_login(self.old_staff)
+
+        response = self.client.post(
+            reverse("complaints:update", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "fee",
+                "fee-fee_status": Complaint.FeeStatus.PENDING,
+                "fee-fee_notes": "Resident should be advised at intake.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.complaint.refresh_from_db()
+        self.assertEqual(self.complaint.fee_status, Complaint.FeeStatus.PENDING)
+        self.assertIsNone(self.complaint.fee_amount)
+        self.assertEqual(self.complaint.fee_receipt_number, "")
+
+        response = self.client.post(
+            reverse("complaints:update", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "fee",
+                "fee-fee_status": Complaint.FeeStatus.PAID,
+                "fee-fee_amount": "50.00",
+                "fee-fee_paid_at": timezone.localdate().isoformat(),
+                "fee-fee_notes": "Trying to finalize as staff.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.complaint.refresh_from_db()
+        self.assertEqual(self.complaint.fee_status, Complaint.FeeStatus.PENDING)
+        self.assertEqual(self.complaint.fee_receipt_number, "")
+
+    def test_staff_cannot_change_finalized_filing_fee(self):
+        self.complaint.fee_status = Complaint.FeeStatus.PAID
+        self.complaint.fee_amount = "50.00"
+        self.complaint.fee_receipt_number = f"FEE-{timezone.localdate().year}-CMP{self.complaint.pk:05d}"
+        self.complaint.fee_paid_at = timezone.localdate()
+        self.complaint.fee_collected_by = self.admin
+        self.complaint.save()
+        self.client.force_login(self.old_staff)
+
+        response = self.client.post(
+            reverse("complaints:update", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "fee",
+                "fee-fee_status": Complaint.FeeStatus.PENDING,
+                "fee-fee_notes": "Trying to reopen as staff.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.complaint.refresh_from_db()
+        self.assertEqual(self.complaint.fee_status, Complaint.FeeStatus.PAID)
+        self.assertTrue(self.complaint.fee_receipt_number.startswith("FEE-"))
+
+    def test_waived_filing_fee_requires_reason_and_notifies_resident(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse("complaints:update", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "fee",
+                "fee-fee_status": Complaint.FeeStatus.WAIVED,
+                "fee-fee_amount": "",
+                "fee-fee_receipt_number": "",
+                "fee-fee_paid_at": "",
+                "fee-fee_notes": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Add a short waiver reason.")
+
+        response = self.client.post(
+            reverse("complaints:update", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "fee",
+                "fee-fee_status": Complaint.FeeStatus.WAIVED,
+                "fee-fee_amount": "",
+                "fee-fee_receipt_number": "",
+                "fee-fee_paid_at": "",
+                "fee-fee_notes": "Indigent complainant.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.complaint.refresh_from_db()
+        self.assertEqual(self.complaint.fee_status, Complaint.FeeStatus.WAIVED)
+        self.assertEqual(self.complaint.fee_notes, "Indigent complainant.")
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.resident,
+                complaint=self.complaint,
+                message__contains="has been waived",
+            ).exists()
+        )
+
     def test_resident_follow_up_notifies_admin_and_assignee(self):
         self.client.force_login(self.resident)
 
@@ -193,3 +340,95 @@ class ComplaintNotificationTests(TestCase):
         response = self.client.get(reverse("complaints:submit"))
 
         self.assertEqual(response.status_code, 200)
+
+    def test_staff_can_review_uploaded_evidence(self):
+        evidence = UploadedEvidence.objects.create(
+            complaint=self.complaint,
+            uploaded_by=self.resident,
+            file=SimpleUploadedFile("proof.txt", b"proof", content_type="text/plain"),
+        )
+        self.client.force_login(self.old_staff)
+
+        response = self.client.post(
+            reverse("complaints:detail", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "evidence_review",
+                "evidence_kind": "complainant",
+                "evidence_id": str(evidence.pk),
+                "review_status": UploadedEvidence.ReviewStatus.ACCEPTED,
+                "review_remarks": "Readable and relevant.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        evidence.refresh_from_db()
+        self.assertEqual(evidence.review_status, UploadedEvidence.ReviewStatus.ACCEPTED)
+        self.assertEqual(evidence.reviewed_by, self.old_staff)
+        self.assertTrue(ActivityLog.objects.filter(action=ActivityLog.Action.EVIDENCE_REVIEWED).exists())
+
+    def test_resident_can_submit_feedback_after_resolution(self):
+        self.complaint.status = Complaint.Status.RESOLVED
+        self.complaint.resolved_at = timezone.now()
+        self.complaint.save(update_fields=["status", "resolved_at"])
+        self.client.force_login(self.resident)
+
+        response = self.client.post(
+            reverse("complaints:detail", kwargs={"pk": self.complaint.pk}),
+            {
+                "workflow_action": "feedback",
+                "rating": "5",
+                "resolution_accepted": "on",
+                "comments": "Handled well.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ComplaintFeedback.objects.filter(complaint=self.complaint, rating=5).exists())
+
+    def test_reports_filter_by_fee_status(self):
+        self.complaint.fee_status = Complaint.FeeStatus.PAID
+        self.complaint.save(update_fields=["fee_status"])
+        other = Complaint.objects.create(
+            resident=self.resident,
+            category=self.category,
+            title="Other issue",
+            description="Another complaint.",
+            incident_location="Purok Test",
+            incident_date=timezone.localdate(),
+            privacy_consent=True,
+            accuracy_certification=True,
+            contact_permission=True,
+            fee_status=Complaint.FeeStatus.PENDING,
+        )
+        Respondent.objects.create(complaint=other, full_name="Other respondent")
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("complaints:reports"), {"fee_status": Complaint.FeeStatus.PAID})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_complaints"], 1)
+
+    def test_staff_can_generate_resolution_summary_pdf(self):
+        self.client.force_login(self.old_staff)
+
+        response = self.client.get(
+            reverse("complaints:notice_pdf", kwargs={"pk": self.complaint.pk, "notice_type": "summary"})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(ActivityLog.objects.filter(action=ActivityLog.Action.NOTICE_GENERATED).exists())
+
+    def test_check_sla_command_notifies_overdue_complaints(self):
+        self.complaint.deadline_at = timezone.now() - timezone.timedelta(hours=2)
+        self.complaint.save(update_fields=["deadline_at"])
+
+        call_command("check_sla")
+
+        self.assertTrue(
+            Notification.objects.filter(
+                complaint=self.complaint,
+                notification_type=Notification.Type.OVERDUE,
+            ).exists()
+        )
+        self.assertTrue(ActivityLog.objects.filter(action=ActivityLog.Action.SLA_OVERDUE_FLAGGED).exists())

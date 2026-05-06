@@ -45,6 +45,22 @@
         <strong>{{ verified_residents }}</strong>
         <p class="stat-card-desc">Identity checked by admin</p>
     </div>
+    <div class="stat-card stat-card--pending">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+        <span>Pending Review</span>
+        <strong>{{ pending_verification }}</strong>
+        <p class="stat-card-desc">Waiting for admin verification</p>
+    </div>
+    <div class="stat-card stat-card--danger">
+        <div class="stat-card-icon-wrap stat-card-icon-wrap--danger">
+            <i class="bi bi-x-circle-fill"></i>
+        </div>
+        <span>Rejected</span>
+        <strong>{{ rejected_verification }}</strong>
+        <p class="stat-card-desc">Residents need updated details</p>
+    </div>
 </div>
 
 <div class="content-card entity-toolbar-card account-toolbar-card mb-3">
@@ -56,11 +72,36 @@
                 <input id="resident-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search name, username, email, phone, or address" autocomplete="off">
             </div>
         </div>
+        <div>
+            <label class="form-label" for="verification-status">Verification</label>
+            <select id="verification-status" class="form-select" name="verification_status">
+                <option value="">All statuses</option>
+                {% for value,label in verification_choices %}
+                    <option value="{{ value }}" {% if selected_verification_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="profile-state">Profile</label>
+            <select id="profile-state" class="form-select" name="profile_state">
+                <option value="">Any profile</option>
+                <option value="complete" {% if selected_profile_state == "complete" %}selected{% endif %}>Complete</option>
+                <option value="incomplete" {% if selected_profile_state == "incomplete" %}selected{% endif %}>Incomplete</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label" for="id-status">Valid ID</label>
+            <select id="id-status" class="form-select" name="id_status">
+                <option value="">Any ID state</option>
+                <option value="uploaded" {% if selected_id_status == "uploaded" %}selected{% endif %}>Uploaded</option>
+                <option value="missing" {% if selected_id_status == "missing" %}selected{% endif %}>Missing</option>
+            </select>
+        </div>
         <div class="entity-toolbar-actions">
             <button class="btn btn-primary" type="submit">
                 <i class="bi bi-search me-1"></i>Search
             </button>
-            {% if search_query %}
+            {% if search_query or selected_verification_status or selected_profile_state or selected_id_status %}
                 <a class="btn btn-outline-secondary" href="{% url 'accounts:residents' %}">Clear</a>
             {% endif %}
             <div class="complaint-filter-meta">

@@ -6,6 +6,7 @@ from accounts.models import User
 from .models import (
     Complaint,
     ComplaintCategory,
+    ComplaintFeedback,
     ComplaintReply,
     ComplaintResponse,
     Escalation,
@@ -304,6 +305,55 @@ class ComplaintUpdateForm(forms.ModelForm):
         self.fields["assigned_to"].queryset = staff_queryset
 
 
+class ComplaintFeeForm(forms.ModelForm):
+    class Meta:
+        model = Complaint
+        fields = ["fee_status", "fee_amount", "fee_paid_at", "fee_notes"]
+        widgets = {
+            "fee_status": forms.Select(attrs={"class": "form-select"}),
+            "fee_amount": forms.NumberInput(attrs={"class": "form-control", "min": "0", "step": "0.01"}),
+            "fee_paid_at": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "fee_notes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Optional notes, waiver reason, or official handling details.",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.can_finalize_fee = kwargs.pop("can_finalize_fee", False)
+        super().__init__(*args, **kwargs)
+        if not self.can_finalize_fee:
+            self.fields["fee_status"].choices = [(Complaint.FeeStatus.PENDING, "Pending")]
+            self.fields["fee_status"].help_text = (
+                "Staff can flag the fee as pending. Admin finalizes paid, waived, or not required."
+            )
+            self.fields.pop("fee_amount")
+            self.fields.pop("fee_paid_at")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fee_status = cleaned_data.get("fee_status")
+        fee_amount = cleaned_data.get("fee_amount")
+        fee_paid_at = cleaned_data.get("fee_paid_at")
+        fee_notes = (cleaned_data.get("fee_notes") or "").strip()
+
+        if fee_status == Complaint.FeeStatus.PAID:
+            if not fee_amount:
+                self.add_error("fee_amount", "Enter the official amount paid.")
+            if not fee_paid_at:
+                self.add_error("fee_paid_at", "Enter the payment date.")
+        elif fee_status == Complaint.FeeStatus.WAIVED and not fee_notes:
+            self.add_error("fee_notes", "Add a short waiver reason.")
+
+        if fee_amount is not None and fee_amount < 0:
+            self.add_error("fee_amount", "Amount cannot be negative.")
+
+        return cleaned_data
+
+
 class ComplaintResponseForm(forms.ModelForm):
     class Meta:
         model = ComplaintResponse
@@ -405,6 +455,41 @@ class ComplaintReplyForm(forms.ModelForm):
         if file:
             validate_evidence_file(file)
         return file
+
+
+class ComplaintFeedbackForm(forms.ModelForm):
+    class Meta:
+        model = ComplaintFeedback
+        fields = ["rating", "resolution_accepted", "comments"]
+        widgets = {
+            "rating": forms.NumberInput(attrs={"class": "form-control", "min": 1, "max": 5}),
+            "resolution_accepted": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "comments": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3, "placeholder": "Optional feedback about the resolution."}
+            ),
+        }
+        labels = {
+            "rating": "Rating from 1 to 5",
+            "resolution_accepted": "I accept the resolution",
+        }
+
+    def clean_rating(self):
+        rating = self.cleaned_data["rating"]
+        if rating < 1 or rating > 5:
+            raise forms.ValidationError("Rating must be from 1 to 5.")
+        return rating
+
+
+class EvidenceReviewForm(forms.Form):
+    review_status = forms.ChoiceField(
+        choices=UploadedEvidence.ReviewStatus.choices,
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+    review_remarks = forms.CharField(
+        required=False,
+        max_length=255,
+        widget=forms.TextInput(attrs={"class": "form-control form-control-sm", "placeholder": "Optional review note"}),
+    )
 
 
 class ComplaintCategoryForm(forms.ModelForm):

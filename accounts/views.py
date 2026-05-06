@@ -25,6 +25,8 @@ from .forms import (
     UserProfileForm,
 )
 from .models import PasswordResetOTP, ResidentProfile, StaffProfile, User
+from complaints.models import ActivityLog
+from complaints.services import log_activity
 
 
 PASSWORD_RESET_USER_SESSION_KEY = "password_reset_user_id"
@@ -215,6 +217,12 @@ def set_new_password_view(request):
 
         user.set_password(password)
         user.save(update_fields=["password"])
+        log_activity(
+            actor=user,
+            action=ActivityLog.Action.PASSWORD_RESET,
+            target=user,
+            summary=f"Password reset completed for {user.username}.",
+        )
         request.session.pop(PASSWORD_RESET_USER_SESSION_KEY, None)
         request.session.pop(PASSWORD_RESET_VERIFIED_SESSION_KEY, None)
         messages.success(request, "Password reset successful. You can now log in.")
@@ -313,6 +321,19 @@ def edit_account_view(request, pk):
                 resident_profile.verified_at = timezone.now() if is_verified else None
                 resident_profile.verified_by = request.user if is_verified else None
             resident_profile.save()
+            log_activity(
+                actor=request.user,
+                action=ActivityLog.Action.RESIDENT_VERIFICATION_UPDATED,
+                target=account,
+                summary=f"Resident verification updated for {account.username}.",
+                metadata={"verification_status": resident_profile.verification_status},
+            )
+        log_activity(
+            actor=request.user,
+            action=ActivityLog.Action.ACCOUNT_UPDATED,
+            target=account,
+            summary=f"{account_type} account updated for {account.username}.",
+        )
         messages.success(request, f"{account_type} account updated successfully.")
         return redirect(_account_list_url(account))
 
@@ -337,6 +358,13 @@ def toggle_account_status_view(request, pk):
     account = _admin_managed_account_or_404(pk)
     account.is_active = not account.is_active
     account.save(update_fields=["is_active"])
+    log_activity(
+        actor=request.user,
+        action=ActivityLog.Action.ACCOUNT_STATUS_CHANGED,
+        target=account,
+        summary=f"Account {account.username} {'activated' if account.is_active else 'deactivated'}.",
+        metadata={"is_active": account.is_active},
+    )
     state = "activated" if account.is_active else "deactivated"
     messages.success(request, f"{account.get_full_name() or account.username} has been {state}.")
     return redirect(_account_list_url(account))
@@ -354,6 +382,12 @@ def reset_account_password_view(request, pk):
     temporary_password = get_random_string(12)
     account.set_password(temporary_password)
     account.save(update_fields=["password"])
+    log_activity(
+        actor=request.user,
+        action=ActivityLog.Action.PASSWORD_RESET,
+        target=account,
+        summary=f"Temporary password generated for {account.username}.",
+    )
     try:
         send_mail(
             "Barangay Cawitan - Temporary Password",
@@ -386,6 +420,12 @@ def verify_resident_view(request, pk):
     profile.verified_at = timezone.now()
     profile.verified_by = request.user
     profile.save(update_fields=["verification_status", "verified_at", "verified_by"])
+    log_activity(
+        actor=request.user,
+        action=ActivityLog.Action.RESIDENT_VERIFIED,
+        target=account,
+        summary=f"Resident {account.username} verified.",
+    )
     messages.success(request, f"{account.get_full_name() or account.username} has been verified.")
     return redirect("accounts:residents")
 
@@ -395,6 +435,9 @@ def verify_resident_view(request, pk):
 def resident_management_view(request):
     residents = User.objects.filter(role=User.Role.RESIDENT).select_related("resident_profile").order_by("last_name")
     search = request.GET.get("q", "").strip()
+    verification_status = request.GET.get("verification_status", "")
+    profile_state = request.GET.get("profile_state", "")
+    id_status = request.GET.get("id_status", "")
     total_residents = residents.count()
     complete_profiles = residents.exclude(
         Q(email="")
@@ -406,6 +449,12 @@ def resident_management_view(request):
     verified_residents = residents.filter(
         resident_profile__verification_status=ResidentProfile.VerificationStatus.VERIFIED
     ).count()
+    pending_verification = residents.filter(
+        resident_profile__verification_status=ResidentProfile.VerificationStatus.PENDING
+    ).count()
+    rejected_verification = residents.filter(
+        resident_profile__verification_status=ResidentProfile.VerificationStatus.REJECTED
+    ).count()
     if search:
         residents = residents.filter(
             Q(first_name__icontains=search)
@@ -414,6 +463,40 @@ def resident_management_view(request):
             | Q(email__icontains=search)
             | Q(resident_profile__phone_number__icontains=search)
             | Q(resident_profile__address__icontains=search)
+        )
+    if verification_status:
+        residents = residents.filter(resident_profile__verification_status=verification_status)
+    if profile_state == "complete":
+        residents = residents.exclude(
+            Q(email="")
+            | Q(first_name="")
+            | Q(last_name="")
+            | Q(resident_profile__phone_number="")
+            | Q(resident_profile__address="")
+            | Q(resident_profile__birth_date__isnull=True)
+        )
+    elif profile_state == "incomplete":
+        residents = residents.filter(
+            Q(email="")
+            | Q(first_name="")
+            | Q(last_name="")
+            | Q(resident_profile__phone_number="")
+            | Q(resident_profile__address="")
+            | Q(resident_profile__birth_date__isnull=True)
+        )
+    if id_status == "uploaded":
+        residents = residents.exclude(
+            Q(resident_profile__valid_id_front_image="")
+            | Q(resident_profile__valid_id_front_image__isnull=True)
+            | Q(resident_profile__valid_id_back_image="")
+            | Q(resident_profile__valid_id_back_image__isnull=True)
+        )
+    elif id_status == "missing":
+        residents = residents.filter(
+            Q(resident_profile__valid_id_front_image="")
+            | Q(resident_profile__valid_id_front_image__isnull=True)
+            | Q(resident_profile__valid_id_back_image="")
+            | Q(resident_profile__valid_id_back_image__isnull=True)
         )
     return render(
         request,
@@ -426,6 +509,12 @@ def resident_management_view(request):
             "complete_profiles": complete_profiles,
             "incomplete_profiles": total_residents - complete_profiles,
             "verified_residents": verified_residents,
+            "pending_verification": pending_verification,
+            "rejected_verification": rejected_verification,
+            "verification_choices": ResidentProfile.VerificationStatus.choices,
+            "selected_verification_status": verification_status,
+            "selected_profile_state": profile_state,
+            "selected_id_status": id_status,
         },
     )
 

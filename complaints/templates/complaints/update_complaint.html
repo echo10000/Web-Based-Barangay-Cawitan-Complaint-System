@@ -69,6 +69,10 @@
             <i class="bi bi-arrow-up-right-circle-fill"></i>
             <span>Resolution</span>
         </button>
+        <button class="workflow-tab" type="button" :class="{ 'active': activeTab === 'fee' }" @click="activeTab = 'fee'">
+            <i class="bi bi-receipt-cutoff"></i>
+            <span>Filing Fee</span>
+        </button>
     </div>
 
     <section x-show="activeTab === 'assignment'" class="workflow-panel" x-transition>
@@ -359,6 +363,60 @@
                         <button class="btn btn-danger" type="submit"><i class="bi bi-arrow-up-right-circle-fill me-1"></i>Escalate Complaint</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </section>
+
+    <section x-show="activeTab === 'fee'" class="workflow-panel" x-transition>
+        <div class="workflow-two-column">
+            <div class="content-card form-card modern-form-card workflow-form-card">
+                <div class="form-card-heading">
+                    <div class="form-card-icon"><i class="bi bi-receipt-cutoff"></i></div>
+                    <div>
+                        <p class="entity-card-title">Filing Fee Record</p>
+                        <p class="entity-card-subtitle">Track official fee status without blocking complaint handling.</p>
+                    </div>
+                </div>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="workflow_action" value="fee">
+                    <div class="form-section">
+                        <div class="form-section-heading"><span>Official Record</span></div>
+                        <div class="fee-generated-reference mb-3">
+                            <span>Fee receipt number</span>
+                            <strong>{{ complaint.fee_receipt_number|default:"Auto-generated when marked paid" }}</strong>
+                        </div>
+                        {% if user.is_staff_member %}
+                            <div class="workflow-empty-state mb-3">
+                                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                                <p class="entity-muted mb-0">Staff can mark the fee as pending. Admin finalizes paid, waived, or not required records.</p>
+                            </div>
+                        {% endif %}
+                        {% for field in fee_form %}
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                                {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-action-bar">
+                        <button class="btn btn-success" type="submit"><i class="bi bi-save-fill me-1"></i>Save Fee Record</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="content-card fee-guidance-card">
+                <div class="fee-guidance-icon"><i class="bi bi-info-circle-fill"></i></div>
+                <p class="entity-card-title">How to use this</p>
+                <p class="entity-card-subtitle">Use this section as an official tracking note only. Payments should be handled by authorized barangay personnel with an official receipt.</p>
+                <div class="fee-guidance-list">
+                    <div><strong>Staff</strong><span>Can flag a fee as pending for admin or cashier handling.</span></div>
+                    <div><strong>Admin</strong><span>Can mark fees as not required, paid, or waived after review.</span></div>
+                    <div><strong>Paid</strong><span>Admin records the amount and payment date. The system creates the fee receipt number.</span></div>
+                    <div><strong>Resident</strong><span>Gets notified when the fee becomes pending, paid, or waived.</span></div>
+                </div>
             </div>
         </div>
     </section>

@@ -4,6 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from complaints.models import ActivityLog
 from .models import ResidentProfile, User
 
 
@@ -83,6 +84,7 @@ class AdminAccountActionTests(TestCase):
         self.resident.refresh_from_db()
 
         self.assertTrue(self.resident.is_active)
+        self.assertTrue(ActivityLog.objects.filter(action=ActivityLog.Action.ACCOUNT_STATUS_CHANGED).exists())
 
     def test_admin_can_edit_resident_account(self):
         self.client.force_login(self.admin)
@@ -115,6 +117,21 @@ class AdminAccountActionTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(self.resident.is_active)
+
+    def test_resident_management_filters_pending_verification(self):
+        self.resident.resident_profile.verification_status = ResidentProfile.VerificationStatus.PENDING
+        self.resident.resident_profile.save(update_fields=["verification_status"])
+        other = User.objects.create_user(username="other", password="ResidentPass123", role=User.Role.RESIDENT)
+        ResidentProfile.objects.create(user=other, phone_number="09170000002", address="Purok 2")
+        self.client.force_login(self.admin)
+
+        response = self.client.get(
+            reverse("accounts:residents"),
+            {"verification_status": ResidentProfile.VerificationStatus.PENDING},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["filtered_count"], 1)
 
     @override_settings(
         EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",

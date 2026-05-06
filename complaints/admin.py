@@ -1,8 +1,10 @@
 from django.contrib import admin
 
 from .models import (
+    ActivityLog,
     Complaint,
     ComplaintCategory,
+    ComplaintFeedback,
     ComplaintResponse,
     ComplaintStatusHistory,
     Escalation,
@@ -76,6 +78,15 @@ admin.site.register(RespondentEvidence)
 admin.site.register(HearingMediation)
 admin.site.register(Escalation)
 admin.site.register(UploadedEvidence)
+admin.site.register(ComplaintFeedback)
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "action", "actor", "complaint", "summary")
+    list_filter = ("action", "created_at")
+    search_fields = ("summary", "actor__username", "complaint__title", "target_repr")
+    readonly_fields = ("created_at",)
 
 
 @admin.register(Notification)
@@ -91,3 +102,4 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ("notification_type", "is_read", "email_status", "created_at")
     search_fields = ("user__username", "user__email", "message", "complaint__title")
     readonly_fields = ("created_at", "read_at", "email_sent_at")
+    ComplaintFeedback,
