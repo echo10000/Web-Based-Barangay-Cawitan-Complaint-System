@@ -9,10 +9,12 @@
             <i class="bi bi-list"></i>
         </button>
         {% endif %}
+        {% if not user.is_authenticated %}
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbar" aria-controls="topNavbar" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="topNavbar">
+        {% endif %}
+        <div class="{% if user.is_authenticated %}navbar-auth-items{% else %}collapse navbar-collapse{% endif %}" id="topNavbar">
             {% if not user.is_authenticated %}
                 <ul class="navbar-nav me-auto align-items-lg-center">
                     <li class="nav-item">
@@ -29,7 +31,7 @@
                     </li>
                 </ul>
             {% endif %}
-            <ul class="navbar-nav {% if user.is_authenticated %}ms-auto{% endif %} align-items-lg-center gap-2">
+            <ul class="navbar-nav {% if user.is_authenticated %}navbar-user-actions ms-auto{% endif %} align-items-lg-center gap-2">
                 {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link nav-notification-link" href="{% url 'complaints:notifications' %}" aria-label="Notifications">

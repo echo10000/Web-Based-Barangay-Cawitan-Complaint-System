@@ -102,6 +102,23 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255,255,255,0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
+.navbar-auth-items {
+    align-items: center;
+    display: flex;
+    margin-left: auto;
+}
+
+.navbar-user-actions {
+    align-items: center !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+}
+
+.navbar-user-actions .nav-item {
+    align-items: center;
+    display: flex;
+}
+
 .app-navbar .nav-link,
 .app-navbar .navbar-username {
     color: rgba(255,255,255,.82) !important;
@@ -112,18 +129,28 @@ a:hover { color: var(--navy-dark); text-decoration: underline; }
 
 .nav-notification-link {
     align-items: center;
-    border-radius: 999px;
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 10px;
     display: inline-flex;
-    height: 34px;
+    height: 38px;
     justify-content: center;
-    min-width: 34px;
+    min-width: 38px;
     padding: 6px !important;
     position: relative;
+    transition: background .16s ease, border-color .16s ease, transform .16s ease;
 }
 
 .nav-notification-link:hover {
-    background: rgba(255,255,255,.12);
+    background: rgba(255,255,255,.18);
+    border-color: rgba(255,255,255,.32);
+    transform: translateY(-1px);
     text-decoration: none;
+}
+
+.nav-notification-link i {
+    font-size: 17px;
+    line-height: 1;
 }
 
 .nav-notification-badge {
@@ -6013,6 +6040,23 @@ video {
         width: 100%;
     }
 
+    .navbar-auth-items {
+        flex: 0 0 auto;
+    }
+
+    .app-navbar .navbar-user-actions {
+        flex-direction: row !important;
+        gap: 8px !important;
+        margin-left: 0 !important;
+        width: auto !important;
+    }
+
+    .app-navbar .navbar-user-actions .nav-link,
+    .app-navbar .navbar-user-actions .navbar-username {
+        min-height: 38px;
+        width: auto;
+    }
+
     .app-navbar .nav-link:hover,
     .app-navbar .nav-link:focus {
         background: rgba(255,255,255,.12);
@@ -6132,6 +6176,17 @@ video {
     .app-navbar .navbar-toggler {
         height: 38px;
         width: 38px;
+    }
+
+    .app-navbar .navbar-user-actions {
+        gap: 6px !important;
+    }
+
+    .app-navbar .navbar-user-actions .navbar-username {
+        max-width: 42vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .page-header h1,

@@ -6,6 +6,19 @@ from complaints.models import ComplaintCategory
 from .models import ResidentProfile, StaffProfile, User
 
 
+PUROK_CHOICES = [
+    ("", "Select purok"),
+    ("Purok 1-A", "Purok 1-A"),
+    ("Purok 1-B", "Purok 1-B"),
+    ("Purok 2", "Purok 2"),
+    ("Purok 3", "Purok 3"),
+    ("Purok 4", "Purok 4"),
+    ("Purok 5", "Purok 5"),
+    ("Purok 6", "Purok 6"),
+    ("Purok 7", "Purok 7"),
+]
+
+
 class LoginForm(AuthenticationForm):
     username = forms.CharField(
         label="Username or email",
@@ -42,8 +55,7 @@ class ResidentRegistrationForm(UserCreationForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={"class": "form-control"}))
     phone_number = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     address = forms.CharField(widget=forms.TextInput(attrs={"class": "form-control"}))
-    purok = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
-    household_number = forms.CharField(max_length=50, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    purok = forms.ChoiceField(choices=PUROK_CHOICES, required=False, widget=forms.Select(attrs={"class": "form-select"}))
     birth_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
 
     class Meta:
@@ -66,7 +78,7 @@ class ResidentRegistrationForm(UserCreationForm):
                 phone_number=self.cleaned_data.get("phone_number", ""),
                 address=self.cleaned_data["address"],
                 purok=self.cleaned_data.get("purok", ""),
-                household_number=self.cleaned_data.get("household_number", ""),
+                household_number="",
                 birth_date=self.cleaned_data.get("birth_date"),
             )
         return user
