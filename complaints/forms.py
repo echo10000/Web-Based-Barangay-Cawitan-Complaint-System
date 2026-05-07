@@ -458,20 +458,34 @@ class ComplaintReplyForm(forms.ModelForm):
 
 
 class ComplaintFeedbackForm(forms.ModelForm):
+    rating = forms.IntegerField(
+        min_value=1,
+        max_value=5,
+        widget=forms.HiddenInput(attrs={"data-feedback-rating-input": "true"}),
+    )
+    resolution_accepted = forms.TypedChoiceField(
+        choices=(("true", "Yes, I accept"), ("false", "No, I don't")),
+        coerce=lambda value: value == "true",
+        required=True,
+        widget=forms.HiddenInput(attrs={"data-feedback-acceptance-input": "true"}),
+    )
+    comments = forms.CharField(
+        required=False,
+        max_length=300,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control feedback-textarea",
+                "rows": 3,
+                "maxlength": 300,
+                "placeholder": "Tell us more about your experience...",
+                "data-feedback-comments": "true",
+            }
+        ),
+    )
+
     class Meta:
         model = ComplaintFeedback
         fields = ["rating", "resolution_accepted", "comments"]
-        widgets = {
-            "rating": forms.NumberInput(attrs={"class": "form-control", "min": 1, "max": 5}),
-            "resolution_accepted": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "comments": forms.Textarea(
-                attrs={"class": "form-control", "rows": 3, "placeholder": "Optional feedback about the resolution."}
-            ),
-        }
-        labels = {
-            "rating": "Rating from 1 to 5",
-            "resolution_accepted": "I accept the resolution",
-        }
 
     def clean_rating(self):
         rating = self.cleaned_data["rating"]

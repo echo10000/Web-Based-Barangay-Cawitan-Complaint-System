@@ -63,6 +63,14 @@
                     <div class="col-12">
                         <div class="verification-id-review">
                             <div>
+                                <span class="verification-id-label">Valid ID type</span>
+                                {% if account.resident_profile.valid_id_type %}
+                                    <span class="entity-chip">{{ account.resident_profile.get_valid_id_type_display }}</span>
+                                {% else %}
+                                    <span class="entity-muted">No ID type selected.</span>
+                                {% endif %}
+                            </div>
+                            <div>
                                 <span class="verification-id-label">Valid ID front</span>
                                 {% if account.resident_profile.valid_id_front_image %}
                                     <a class="btn btn-outline-primary btn-sm" href="{{ account.resident_profile.valid_id_front_image.url }}" target="_blank">

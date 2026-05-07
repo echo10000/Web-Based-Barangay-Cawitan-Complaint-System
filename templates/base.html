@@ -24,6 +24,7 @@
     <div class="app-shell">
         {% if user.is_authenticated %}
             {% include "sidebar.html" %}
+            <button class="sidebar-backdrop" type="button" data-sidebar-close aria-label="Close sidebar menu"></button>
         {% endif %}
         <main class="app-main">
             <div class="container-fluid py-4">
@@ -51,11 +52,11 @@
                     </div>
                 </div>
                 <nav class="app-footer-links">
-                    <a href="#">Contact</a>
+                    <a href="{% url 'dashboard:contact' %}">Contact</a>
                     <span class="app-footer-sep">|</span>
-                    <a href="#">Privacy Policy</a>
+                    <a href="{% url 'dashboard:privacy_policy' %}">Privacy Policy</a>
                     <span class="app-footer-sep">|</span>
-                    <a href="#">Terms</a>
+                    <a href="{% url 'dashboard:terms' %}">Terms</a>
                 </nav>
             </div>
         </div>

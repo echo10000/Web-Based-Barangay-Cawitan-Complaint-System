@@ -1,0 +1,42 @@
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="app-pagination" aria-label="Pagination">
+    <div class="app-pagination-summary">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </div>
+    <ul class="pagination mb-0">
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}
+                <a class="page-link" href="?{% if pagination_querystring %}{{ pagination_querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            {% else %}
+                <span class="page-link" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>
+            {% endif %}
+        </li>
+
+        {% for page_number in pagination_range %}
+            {% if page_number == page_obj.paginator.ELLIPSIS %}
+                <li class="page-item disabled"><span class="page-link">{{ page_number }}</span></li>
+            {% else %}
+                <li class="page-item {% if page_obj.number == page_number %}active{% endif %}">
+                    {% if page_obj.number == page_number %}
+                        <span class="page-link">{{ page_number }}</span>
+                    {% else %}
+                        <a class="page-link" href="?{% if pagination_querystring %}{{ pagination_querystring }}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a>
+                    {% endif %}
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}
+                <a class="page-link" href="?{% if pagination_querystring %}{{ pagination_querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            {% else %}
+                <span class="page-link" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+            {% endif %}
+        </li>
+    </ul>
+</nav>
+{% endif %}

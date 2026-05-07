@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timedelta
 
 from django.contrib import messages
@@ -57,6 +56,18 @@ def home_view(request):
     if request.user.is_staff_member:
         return redirect("dashboard:staff")
     return redirect("dashboard:resident")
+
+
+def contact_view(request):
+    return render(request, "dashboard/contact.html")
+
+
+def privacy_policy_view(request):
+    return render(request, "dashboard/privacy_policy.html")
+
+
+def terms_view(request):
+    return render(request, "dashboard/terms.html")
 
 
 @login_required
@@ -305,8 +316,8 @@ def admin_dashboard_view(request):
             "staff_performance": staff_performance[:6],
             "recent_complaints":  Complaint.objects.select_related("resident", "assigned_to")[:8],
             "urgent_complaints":  urgent_complaints,
-            "chart_status":       json.dumps(chart_status),
-            "chart_category":     json.dumps(chart_category),
-            "chart_monthly":      json.dumps(chart_monthly),
+            "chart_status":       chart_status,
+            "chart_category":     chart_category,
+            "chart_monthly":      chart_monthly,
         },
     )

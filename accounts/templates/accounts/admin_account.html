@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Admin Account Settings | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="account-polish-page admin-account-page">
+    <div class="page-header page-header-row">
+        <div>
+            <h1>Admin Account Settings</h1>
+            <p>Manage your administrator identity, security, and system access.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'dashboard:admin' %}">
+            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <div class="admin-account-overview">
+        <div class="content-card admin-account-identity">
+            <div class="admin-account-avatar">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <div>
+                <p class="admin-account-kicker">System Administrator</p>
+                <h2>{{ user.get_full_name|default:user.username }}</h2>
+                <p>{{ user.email|default:"No email address set" }}</p>
+                <div class="admin-account-badges">
+                    <span><i class="bi bi-person-badge-fill"></i> Barangay Admin</span>
+                    {% if user.is_superuser %}
+                        <span><i class="bi bi-key-fill"></i> Superuser</span>
+                    {% endif %}
+                    {% if user.is_active %}
+                        <span><i class="bi bi-check-circle-fill"></i> Active</span>
+                    {% else %}
+                        <span><i class="bi bi-x-circle-fill"></i> Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-account-metrics">
+            <div class="stat-card stat-card--info">
+                <span>Open Complaints</span>
+                <strong>{{ open_complaints }}</strong>
+                <p class="stat-card-desc">Currently needing action</p>
+            </div>
+            <div class="stat-card stat-card--emerald">
+                <span>Residents</span>
+                <strong>{{ total_residents }}</strong>
+                <p class="stat-card-desc">Registered accounts</p>
+            </div>
+            <div class="stat-card stat-card--total">
+                <span>Staff</span>
+                <strong>{{ total_staff }}</strong>
+                <p class="stat-card-desc">Barangay staff accounts</p>
+            </div>
+            <div class="stat-card stat-card--pending">
+                <span>Categories</span>
+                <strong>{{ active_categories }}</strong>
+                <p class="stat-card-desc">Active complaint types</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-account-grid">
+        <div class="content-card form-card modern-form-card admin-account-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-person-gear"></i></div>
+                <div>
+                    <p class="entity-card-title">Admin Identity</p>
+                    <p class="entity-card-subtitle">These details identify the administrator using the system.</p>
+                </div>
+            </div>
+            <form method="post" class="account-polish-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="account">
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <span>Login & Contact</span>
+                    </div>
+                    <div class="row account-form-grid">
+                        {% for field in user_form %}
+                            <div class="col-md-6 mb-3 account-form-field">
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% for error in field.errors %}
+                                    <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-floppy-fill me-1"></i>Save Admin Details
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="content-card form-card modern-form-card admin-account-card">
+            <div class="form-card-heading">
+                <div class="form-card-icon"><i class="bi bi-lock-fill"></i></div>
+                <div>
+                    <p class="entity-card-title">Account Security</p>
+                    <p class="entity-card-subtitle">Change the password for this admin login.</p>
+                </div>
+            </div>
+            <form method="post" class="account-polish-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="password">
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <span>Password</span>
+                    </div>
+                    <div class="row account-form-grid">
+                        {% for field in password_form %}
+                            <div class="col-12 mb-3 account-form-field">
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text|safe }}</div>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-action-bar">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-shield-lock-fill me-1"></i>Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-account-grid admin-account-grid--support">
+        <div class="content-card admin-account-card">
+            <div class="entity-card-header admin-account-section-header">
+                <div>
+                    <p class="entity-card-title">System Management</p>
+                    <p class="entity-card-subtitle">Admin-only controls for account and complaint setup.</p>
+                </div>
+            </div>
+            <div class="admin-account-actions">
+                <a href="{% url 'accounts:residents' %}">
+                    <i class="bi bi-people-fill"></i>
+                    <span>Manage Residents</span>
+                </a>
+                <a href="{% url 'accounts:staff' %}">
+                    <i class="bi bi-person-badge-fill"></i>
+                    <span>Manage Staff</span>
+                </a>
+                <a href="{% url 'complaints:categories' %}">
+                    <i class="bi bi-tags-fill"></i>
+                    <span>Manage Categories</span>
+                </a>
+                <a href="{% url 'complaints:reports' %}">
+                    <i class="bi bi-bar-chart-fill"></i>
+                    <span>View Reports</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="content-card admin-account-card">
+            <div class="entity-card-header admin-account-section-header">
+                <div>
+                    <p class="entity-card-title">Recent Admin Activity</p>
+                    <p class="entity-card-subtitle">Latest actions recorded under this admin account.</p>
+                </div>
+            </div>
+            {% if recent_activity %}
+                <div class="admin-account-activity">
+                    {% for activity in recent_activity %}
+                        <div class="admin-account-activity-item">
+                            <i class="bi bi-clock-history"></i>
+                            <div>
+                                <strong>{{ activity.get_action_display }}</strong>
+                                <span>{{ activity.summary }}</span>
+                                <small>{{ activity.created_at|date:"M d, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="entity-empty admin-account-empty">
+                    <i class="bi bi-clock-history entity-empty-icon"></i>
+                    <p class="entity-empty-title">No recent activity yet.</p>
+                    <p class="entity-empty-subtitle">Admin actions will appear here after updates are made.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

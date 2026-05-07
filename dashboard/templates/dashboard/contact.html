@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Contact | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="info-page">
+    <div class="page-header page-header-row">
+        <div>
+            <h1>Contact</h1>
+            <p>Reach the Barangay Cawitan office for complaint-related assistance.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'dashboard:home' %}">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+
+    <div class="info-layout">
+        <section class="content-card info-card">
+            <div class="info-card-heading">
+                <i class="bi bi-building-fill-check"></i>
+                <div>
+                    <p class="entity-card-title">Barangay Cawitan Complaint Desk</p>
+                    <p class="entity-card-subtitle">Use these channels for questions, follow-ups, or urgent coordination.</p>
+                </div>
+            </div>
+            <div class="info-list">
+                <div class="info-list-item">
+                    <span>Office</span>
+                    <strong>Barangay Cawitan Hall, Santa Catalina, Negros Oriental</strong>
+                </div>
+                <div class="info-list-item">
+                    <span>Office Hours</span>
+                    <strong>Monday to Friday, 8:00 AM to 5:00 PM</strong>
+                </div>
+                <div class="info-list-item">
+                    <span>Email</span>
+                    <strong>barangaycawitan@example.com</strong>
+                </div>
+                <div class="info-list-item">
+                    <span>Phone</span>
+                    <strong>Contact the barangay office for the official hotline number.</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-card info-card">
+            <div class="info-card-heading">
+                <i class="bi bi-info-circle-fill"></i>
+                <div>
+                    <p class="entity-card-title">Before You Visit</p>
+                    <p class="entity-card-subtitle">Bring details that help staff identify and process your concern.</p>
+                </div>
+            </div>
+            <ul class="info-bullet-list">
+                <li>Complaint reference number, if already submitted.</li>
+                <li>Valid ID and contact information.</li>
+                <li>Photos, documents, or other evidence related to the complaint.</li>
+                <li>Names and contact details of involved parties, when available.</li>
+            </ul>
+        </section>
+    </div>
+</div>
+{% endblock %}

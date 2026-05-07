@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="info-page">
+    <div class="page-header page-header-row">
+        <div>
+            <h1>Privacy Policy</h1>
+            <p>How Barangay Cawitan handles complaint records and account information.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'dashboard:home' %}">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+
+    <div class="content-card info-document">
+        <section>
+            <h2>Information Collected</h2>
+            <p>The system stores account details, contact information, complaint descriptions, uploaded evidence, respondent details, status updates, staff remarks, and feedback submitted after resolution.</p>
+        </section>
+        <section>
+            <h2>Purpose of Use</h2>
+            <p>Information is used to receive complaints, verify resident accounts, assign staff, monitor case progress, notify involved users, generate reports, and maintain official barangay complaint records.</p>
+        </section>
+        <section>
+            <h2>Access Control</h2>
+            <p>Residents can view their own complaints. Staff can view complaints assigned to them or available for handling. Admin users can manage records, accounts, categories, reports, and system activity.</p>
+        </section>
+        <section>
+            <h2>Record Protection</h2>
+            <p>Users should keep their login credentials private. Admin and staff accounts must only access records needed for official complaint handling and barangay operations.</p>
+        </section>
+        <section>
+            <h2>Updates and Corrections</h2>
+            <p>Residents may update their profile details from their account page. For complaint record corrections, contact the barangay office or authorized staff.</p>
+        </section>
+    </div>
+</div>
+{% endblock %}

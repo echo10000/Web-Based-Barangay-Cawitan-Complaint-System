@@ -1,4 +1,4 @@
-<div class="table-responsive">
+<div class="table-responsive complaint-table-wrap">
     <table class="table align-middle complaint-table entity-table">
         <thead>
             <tr>
@@ -16,18 +16,18 @@
         <tbody>
             {% for complaint in complaints %}
                 <tr>
-                    <td>
+                    <td data-label="Title">
                         <a class="complaint-title-link" href="{% url 'complaints:detail' complaint.pk %}">
                             {{ complaint.title }}
                         </a>
                         <div class="complaint-row-meta">#{{ complaint.id }} &middot; {{ complaint.created_at|timesince }} ago</div>
                     </td>
-                    <td>
+                    <td data-label="Category">
                         <span class="complaint-category-chip">{{ complaint.category.name|default:"Uncategorized" }}</span>
                     </td>
-                    <td>{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</td>
-                    <td>{% include "complaints/_status_badge.html" with status=complaint.status %}</td>
-                    <td>
+                    <td data-label="Priority">{% include "complaints/_priority_badge.html" with priority=complaint.priority %}</td>
+                    <td data-label="Status">{% include "complaints/_status_badge.html" with status=complaint.status %}</td>
+                    <td data-label="Deadline">
                         {% if complaint.deadline_at %}
                             <span class="sla-badge {% if complaint.is_overdue %}sla-badge--overdue{% elif complaint.is_closed %}sla-badge--closed{% else %}sla-badge--on-track{% endif %}">
                                 {{ complaint.sla_label }}
@@ -37,10 +37,10 @@
                             <span class="text-muted">Not set</span>
                         {% endif %}
                     </td>
-                    <td>{{ complaint.resident.get_full_name|default:complaint.resident.username }}</td>
-                    <td>{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
-                    <td class="text-muted">{{ complaint.created_at|date:"M d, Y" }}</td>
-                    <td class="entity-table-actions">
+                    <td data-label="Resident">{{ complaint.resident.get_full_name|default:complaint.resident.username }}</td>
+                    <td data-label="Assigned Staff">{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
+                    <td data-label="Date" class="text-muted">{{ complaint.created_at|date:"M d, Y" }}</td>
+                    <td data-label="Actions" class="entity-table-actions">
                         <a class="btn btn-sm btn-outline-primary" href="{% url 'complaints:detail' complaint.pk %}">
                             <i class="bi bi-eye-fill me-1"></i>View
                         </a>

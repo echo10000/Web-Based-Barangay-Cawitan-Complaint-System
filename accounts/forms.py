@@ -96,6 +96,23 @@ class AdminAccountForm(forms.ModelForm):
         }
 
 
+class AdminSelfAccountForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["username", "first_name", "last_name", "email"]
+        widgets = {
+            "username": forms.TextInput(attrs={"class": "form-control"}),
+            "first_name": forms.TextInput(attrs={"class": "form-control"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+        }
+        labels = {
+            "first_name": "Admin first name",
+            "last_name": "Admin last name",
+            "email": "Admin email address",
+        }
+
+
 class ResidentProfileForm(forms.ModelForm):
     class Meta:
         model = ResidentProfile
@@ -105,6 +122,7 @@ class ResidentProfileForm(forms.ModelForm):
             "purok",
             "household_number",
             "birth_date",
+            "valid_id_type",
             "valid_id_front_image",
             "valid_id_back_image",
         ]
@@ -114,14 +132,17 @@ class ResidentProfileForm(forms.ModelForm):
             "purok": forms.TextInput(attrs={"class": "form-control"}),
             "household_number": forms.TextInput(attrs={"class": "form-control"}),
             "birth_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "valid_id_type": forms.Select(attrs={"class": "form-select"}),
             "valid_id_front_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
             "valid_id_back_image": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
         labels = {
+            "valid_id_type": "Type of valid ID",
             "valid_id_front_image": "Valid ID front image",
             "valid_id_back_image": "Valid ID back image",
         }
         help_texts = {
+            "valid_id_type": "Choose the ID shown in the images you will submit.",
             "valid_id_front_image": "Upload the front side of your valid ID.",
             "valid_id_back_image": "Upload the back side of your valid ID.",
         }

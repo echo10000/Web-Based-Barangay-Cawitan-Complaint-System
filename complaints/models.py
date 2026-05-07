@@ -380,7 +380,7 @@ class ComplaintFeedback(models.Model):
     resident = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="complaint_feedback")
     rating = models.PositiveSmallIntegerField()
     resolution_accepted = models.BooleanField(default=True)
-    comments = models.TextField(blank=True)
+    comments = models.TextField(blank=True, max_length=300)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

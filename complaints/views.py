@@ -1,9 +1,10 @@
-import csv
 from datetime import datetime
 from io import BytesIO
+from xml.sax.saxutils import escape
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F
 from django.db.models import Q
 from django.http import HttpResponse
@@ -61,6 +62,32 @@ ACTIVE_ASSIGNMENT_STATUSES = [
     Complaint.Status.IN_PROGRESS,
 ]
 
+IN_PROGRESS_SUMMARY_STATUSES = [
+    Complaint.Status.UNDER_REVIEW,
+    Complaint.Status.RESPONDENT_NOT_CONTACTED,
+    Complaint.Status.RESPONDENT_CONTACTED,
+    Complaint.Status.WAITING_RESPONDENT_RESPONSE,
+    Complaint.Status.RESPONDENT_RESPONSE_RECORDED,
+    Complaint.Status.NO_RESPONSE,
+    Complaint.Status.FAILED_TO_ATTEND,
+    Complaint.Status.SECOND_NOTICE_SENT,
+    Complaint.Status.HEARING_SCHEDULED,
+    Complaint.Status.IN_MEDIATION,
+    Complaint.Status.IN_PROGRESS,
+]
+
+COMPLAINTS_PER_PAGE = 10
+NOTIFICATIONS_PER_PAGE = 12
+
+
+def paginate_queryset(request, queryset, per_page):
+    paginator = Paginator(queryset, per_page)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    page_range = paginator.get_elided_page_range(page_obj.number, on_each_side=1, on_ends=1)
+    return page_obj, query_params.urlencode(), page_range
+
 
 STATUS_NOTIFICATION_MESSAGES = {
     Complaint.Status.UNDER_REVIEW: "Your complaint is now under review by the barangay office.",
@@ -75,8 +102,8 @@ STATUS_NOTIFICATION_MESSAGES = {
 
 BARANGAY_DOCUMENT_HEADER = [
     "Republic of the Philippines",
-    "Province of Cebu",
-    "Municipality of Santa Fe",
+    "Province of Negros Oriental",
+    "Municipality of Santa Catalina",
     "BARANGAY CAWITAN",
 ]
 BARANGAY_OFFICE_NAME = "Office of the Barangay Cawitan Complaint Management System"
@@ -279,12 +306,17 @@ def complaint_list_view(request):
     }
     selected_status_label = dict(Complaint.Status.choices).get(status, "All statuses")
     selected_priority_label = dict(Complaint.Priority.choices).get(priority, "All priorities")
+    filtered_count = complaints.count()
+    page_obj, pagination_querystring, pagination_range = paginate_queryset(request, complaints, COMPLAINTS_PER_PAGE)
 
     return render(
         request,
         "complaints/complaint_list.html",
         {
-            "complaints": complaints,
+            "complaints": page_obj.object_list,
+            "page_obj": page_obj,
+            "pagination_querystring": pagination_querystring,
+            "pagination_range": pagination_range,
             "status_choices": Complaint.Status.choices,
             "priority_choices": Complaint.Priority.choices,
             "selected_status": status,
@@ -294,9 +326,9 @@ def complaint_list_view(request):
             "search_query": search,
             "total_count": all_complaints.count(),
             "pending_count": status_counts.get(Complaint.Status.PENDING, 0),
-            "in_progress_count": status_counts.get(Complaint.Status.IN_PROGRESS, 0),
+            "in_progress_count": sum(status_counts.get(status, 0) for status in IN_PROGRESS_SUMMARY_STATUSES),
             "resolved_count": status_counts.get(Complaint.Status.RESOLVED, 0),
-            "filtered_count": complaints.count(),
+            "filtered_count": filtered_count,
         },
     )
 
@@ -407,9 +439,19 @@ def complaint_detail_view(request, pk):
         messages.error(request, "You do not have permission to view this complaint.")
         return redirect("complaints:list")
 
-    reply_form = ComplaintReplyForm(request.POST or None, request.FILES or None)
-    feedback_form = ComplaintFeedbackForm(request.POST or None)
-    if request.method == "POST" and request.POST.get("workflow_action") == "reply":
+    action = request.POST.get("workflow_action") if request.method == "POST" else None
+    existing_feedback = getattr(complaint, "feedback", None)
+    can_submit_feedback = (
+        request.user == complaint.resident
+        and complaint.status == Complaint.Status.RESOLVED
+        and existing_feedback is None
+    )
+    reply_form = ComplaintReplyForm(
+        request.POST if action == "reply" else None,
+        request.FILES if action == "reply" else None,
+    )
+    feedback_form = ComplaintFeedbackForm(request.POST if action == "feedback" else None)
+    if request.method == "POST" and action == "reply":
         if complaint.is_closed:
             messages.error(request, "This complaint is closed and cannot receive new replies.")
             return redirect(complaint.get_absolute_url())
@@ -448,14 +490,14 @@ def complaint_detail_view(request, pk):
             messages.success(request, "Reply added successfully.")
             return redirect(complaint.get_absolute_url())
 
-    if request.method == "POST" and request.POST.get("workflow_action") == "feedback":
+    if request.method == "POST" and action == "feedback":
         if request.user != complaint.resident:
             messages.error(request, "Only the complainant can submit feedback.")
             return redirect(complaint.get_absolute_url())
         if complaint.status != Complaint.Status.RESOLVED:
             messages.error(request, "Feedback can only be submitted after the complaint is resolved.")
             return redirect(complaint.get_absolute_url())
-        if hasattr(complaint, "feedback"):
+        if existing_feedback is not None:
             messages.error(request, "Feedback has already been submitted for this complaint.")
             return redirect(complaint.get_absolute_url())
         if feedback_form.is_valid():
@@ -513,6 +555,8 @@ def complaint_detail_view(request, pk):
             "public_responses": public_responses,
             "reply_form": reply_form,
             "feedback_form": feedback_form,
+            "existing_feedback": existing_feedback,
+            "can_submit_feedback": can_submit_feedback,
             "complaint_timeline": build_complaint_timeline(complaint, staff_view=staff_view),
             "evidence_review_choices": UploadedEvidence.ReviewStatus.choices,
         },
@@ -523,10 +567,17 @@ def complaint_detail_view(request, pk):
 def notifications_view(request):
     notifications = Notification.objects.filter(user=request.user).select_related("complaint")
     unread_count = notifications.filter(is_read=False).count()
+    page_obj, pagination_querystring, pagination_range = paginate_queryset(request, notifications, NOTIFICATIONS_PER_PAGE)
     return render(
         request,
         "complaints/notifications.html",
-        {"notifications": notifications, "unread_count": unread_count},
+        {
+            "notifications": page_obj.object_list,
+            "page_obj": page_obj,
+            "pagination_querystring": pagination_querystring,
+            "pagination_range": pagination_range,
+            "unread_count": unread_count,
+        },
     )
 
 
@@ -556,33 +607,47 @@ def notification_view_redirect(request, pk):
 def draw_official_pdf_header(pdf, *, width, height, title, subtitle="", generated_by=None):
     from reportlab.lib import colors
 
-    pdf.setStrokeColor(colors.HexColor("#1E3A8A"))
-    pdf.setLineWidth(1.2)
-    pdf.circle(62, height - 58, 24, stroke=1, fill=0)
-    pdf.setFont("Helvetica-Bold", 8)
-    pdf.drawCentredString(62, height - 55, "BC")
-    pdf.setFont("Helvetica", 7)
-    pdf.drawCentredString(62, height - 66, "SEAL")
+    margin = 50
+    header_center_x = width / 2
+    seal_center_x = margin + 34
+    seal_center_y = height - 62
 
-    y = height - 34
+    pdf.setStrokeColor(colors.HexColor("#1E3A8A"))
+    pdf.setLineWidth(1.4)
+    pdf.circle(seal_center_x, seal_center_y, 28, stroke=1, fill=0)
+    pdf.setStrokeColor(colors.HexColor("#94A3B8"))
+    pdf.setLineWidth(0.6)
+    pdf.circle(seal_center_x, seal_center_y, 22, stroke=1, fill=0)
+    pdf.setFont("Helvetica-Bold", 8)
+    pdf.drawCentredString(seal_center_x, seal_center_y + 2, "BC")
+    pdf.setFont("Helvetica", 7)
+    pdf.drawCentredString(seal_center_x, seal_center_y - 8, "SEAL")
+
+    y = height - 35
     pdf.setFont("Helvetica", 9)
     for line in BARANGAY_DOCUMENT_HEADER[:3]:
-        pdf.drawCentredString(width / 2, y, line)
+        pdf.drawCentredString(header_center_x, y, line)
         y -= 11
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawCentredString(width / 2, y, BARANGAY_DOCUMENT_HEADER[3])
+    pdf.setFont("Helvetica-Bold", 13)
+    pdf.drawCentredString(header_center_x, y, BARANGAY_DOCUMENT_HEADER[3])
     y -= 13
     pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawCentredString(width / 2, y, BARANGAY_OFFICE_NAME)
-    y -= 18
-    pdf.line(50, y, width - 50, y)
-    y -= 25
+    pdf.drawCentredString(header_center_x, y, BARANGAY_OFFICE_NAME)
+    y -= 15
+    pdf.setStrokeColor(colors.HexColor("#1E3A8A"))
+    pdf.setLineWidth(1.2)
+    pdf.line(margin, y, width - margin, y)
+    y -= 3
+    pdf.setStrokeColor(colors.HexColor("#CBD5E1"))
+    pdf.setLineWidth(0.5)
+    pdf.line(margin, y, width - margin, y)
+    y -= 24
     pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawCentredString(width / 2, y, title.upper())
+    pdf.drawCentredString(header_center_x, y, title.upper())
     if subtitle:
         y -= 14
         pdf.setFont("Helvetica", 9)
-        pdf.drawCentredString(width / 2, y, subtitle)
+        pdf.drawCentredString(header_center_x, y, subtitle)
     y -= 20
     pdf.setFont("Helvetica", 8)
     generated_at = timezone.localtime(timezone.now()).strftime("%B %d, %Y %I:%M %p")
@@ -1458,6 +1523,124 @@ def get_report_complaints(request):
     return complaints.distinct(), date_from, date_to
 
 
+def csv_safe_cell(value):
+    if value is None:
+        return ""
+    text = str(value).replace("\r", " ").replace("\n", " ").strip()
+    if text.startswith(("=", "+", "-", "@")):
+        return f"'{text}"
+    return text
+
+
+def format_csv_date(value):
+    if not value:
+        return ""
+    return timezone.localtime(value).strftime("%Y-%m-%d")
+
+
+def format_csv_time(value):
+    if not value:
+        return ""
+    return timezone.localtime(value).strftime("%I:%M %p")
+
+
+def get_report_filter_summary(request):
+    filters = []
+    choice_filters = [
+        ("status", "Status", dict(Complaint.Status.choices)),
+        ("priority", "Priority", dict(Complaint.Priority.choices)),
+        ("fee_status", "Fee Status", dict(Complaint.FeeStatus.choices)),
+        ("response_status", "Respondent Response", dict(Respondent.ResponseStatus.choices)),
+        ("mediation_result", "Mediation Result", dict(HearingMediation.MediationResult.choices)),
+        ("sla_status", "SLA Status", {"overdue": "Overdue", "on_track": "On Track", "closed": "Closed"}),
+    ]
+    for key, label, choices in choice_filters:
+        value = request.GET.get(key, "")
+        if value:
+            filters.append((label, choices.get(value, value)))
+
+    category_id = request.GET.get("category", "")
+    if category_id:
+        category = ComplaintCategory.objects.filter(pk=category_id).first()
+        filters.append(("Category", category.name if category else category_id))
+
+    assigned_to_id = request.GET.get("assigned_to", "")
+    if assigned_to_id:
+        user = User.objects.filter(pk=assigned_to_id).first()
+        filters.append(("Assigned To", user.get_full_name() or user.username if user else assigned_to_id))
+
+    purok = request.GET.get("purok", "").strip()
+    if purok:
+        filters.append(("Purok / Location", purok))
+
+    date_from = request.GET.get("date_from", "")
+    if date_from:
+        filters.append(("Date From", date_from))
+
+    date_to = request.GET.get("date_to", "")
+    if date_to:
+        filters.append(("Date To", date_to))
+
+    return filters
+
+
+def format_report_pdf_date(value):
+    if not value:
+        return ""
+    return timezone.localtime(value).strftime("%d-%b-%y")
+
+
+def format_report_pdf_time(value):
+    if not value:
+        return ""
+    return timezone.localtime(value).strftime("%I:%M %p")
+
+
+def truncate_report_pdf_text(value, limit):
+    text = " ".join(str(value or "").split())
+    if len(text) <= limit:
+        return text
+    return f"{text[: max(limit - 1, 0)].rstrip()}..."
+
+
+def build_report_pdf_seal(size=112):
+    from PIL import Image as PILImage
+    from PIL import ImageDraw, ImageFont
+
+    image = PILImage.new("RGBA", (size, size), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(image)
+    border = "#1E3A5F"
+    inner_border = "#94A3B8"
+    draw.ellipse((2, 2, size - 3, size - 3), fill="#FFFFFF", outline=border, width=4)
+    draw.ellipse((14, 14, size - 15, size - 15), outline=inner_border, width=3)
+
+    try:
+        main_font = ImageFont.truetype("arialbd.ttf", size=32)
+        sub_font = ImageFont.truetype("arial.ttf", size=14)
+    except OSError:
+        main_font = ImageFont.load_default()
+        sub_font = ImageFont.load_default()
+
+    top_text = "BARANGAY"
+    bottom_text = "CAWITAN"
+    top_box = draw.textbbox((0, 0), top_text, font=sub_font)
+    bottom_box = draw.textbbox((0, 0), bottom_text, font=sub_font)
+    main_box = draw.textbbox((0, 0), "BC", font=main_font)
+    top_width = top_box[2] - top_box[0]
+    bottom_width = bottom_box[2] - bottom_box[0]
+    main_width = main_box[2] - main_box[0]
+    main_height = main_box[3] - main_box[1]
+
+    draw.text(((size - top_width) / 2, 18), top_text, fill=border, font=sub_font)
+    draw.text(((size - main_width) / 2, (size - main_height) / 2 - 6), "BC", fill=border, font=main_font)
+    draw.text(((size - bottom_width) / 2, size - 30), bottom_text, fill=border, font=sub_font)
+
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+    return buffer
+
+
 @login_required
 @admin_required
 def reports_view(request):
@@ -1553,58 +1736,176 @@ def reports_view(request):
 
 @login_required
 @admin_required
-def reports_export_csv_view(request):
+def reports_export_xlsx_view(request):
     complaints, _, _ = get_report_complaints(request)
-    response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = 'attachment; filename="barangay-cawitan-official-complaints-report.csv"'
-    writer = csv.writer(response)
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    except ImportError:
+        messages.error(request, "Excel export needs openpyxl. Install requirements.txt, then try again.")
+        return redirect("complaints:reports")
+
     generated_at = timezone.localtime(timezone.now()).strftime("%B %d, %Y %I:%M %p")
     generated_by = request.user.get_full_name() or request.user.username
-    writer.writerow(["Republic of the Philippines"])
-    writer.writerow(["Province of Cebu"])
-    writer.writerow(["Municipality of Santa Fe"])
-    writer.writerow(["BARANGAY CAWITAN"])
-    writer.writerow([BARANGAY_OFFICE_NAME])
-    writer.writerow(["OFFICIAL COMPLAINT MONITORING REPORT"])
-    writer.writerow(["Generated", generated_at])
-    writer.writerow(["Generated By", generated_by])
-    writer.writerow(["Applied Filters", request.GET.urlencode() or "None"])
-    writer.writerow([])
-    writer.writerow(
-        [
-            "Complaint No.",
-            "Title",
-            "Category",
-            "Priority",
-            "Status",
-            "Resident",
-            "Assigned To",
-            "Incident Location",
-            "Created At",
-            "Deadline",
-            "Resolved At",
-            "SLA Status",
-        ]
+    total = complaints.count()
+    resolved = complaints.filter(status=Complaint.Status.RESOLVED).count()
+    overdue = sum(1 for complaint in complaints if complaint.is_overdue)
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Complaint Report"
+
+    title_fill = PatternFill("solid", fgColor="D9EAF7")
+    header_fill = PatternFill("solid", fgColor="2F4F7F")
+    gray_fill = PatternFill("solid", fgColor="F2F2F2")
+    green_fill = PatternFill("solid", fgColor="C6EFCE")
+    orange_fill = PatternFill("solid", fgColor="FCE4D6")
+    red_fill = PatternFill("solid", fgColor="FFC7CE")
+    yellow_fill = PatternFill("solid", fgColor="FFF2CC")
+    thin_border = Border(bottom=Side(style="thin", color="D9E2F3"))
+    table_border = Border(
+        left=Side(style="thin", color="D9E2F3"),
+        right=Side(style="thin", color="D9E2F3"),
+        top=Side(style="thin", color="D9E2F3"),
+        bottom=Side(style="thin", color="D9E2F3"),
     )
-    for complaint in complaints.order_by("-created_at"):
-        writer.writerow(
-            [
-                f"CMP-{complaint.id:05d}",
-                complaint.title,
-                complaint.category.name if complaint.category else "Uncategorized",
-                complaint.get_priority_display(),
-                complaint.get_status_display(),
-                complaint.resident.get_full_name() or complaint.resident.username,
-                complaint.assigned_to.get_full_name() or complaint.assigned_to.username if complaint.assigned_to else "",
-                complaint.incident_location,
-                complaint.created_at.strftime("%Y-%m-%d %H:%M"),
-                complaint.deadline_at.strftime("%Y-%m-%d %H:%M") if complaint.deadline_at else "",
-                complaint.resolved_at.strftime("%Y-%m-%d %H:%M") if complaint.resolved_at else "",
-                complaint.sla_label,
-            ]
-        )
-    writer.writerow([])
-    writer.writerow([BARANGAY_DOCUMENT_FOOTER])
+
+    merged_header_rows = [
+        ("Barangay Cawitan Official Complaint Monitoring Report", 1, 16, True),
+        (BARANGAY_OFFICE_NAME, 2, 12, False),
+        (f"Generated At: {generated_at}", 3, 11, False),
+        (f"Generated By: {generated_by}", 4, 11, False),
+    ]
+    for value, row, size, bold in merged_header_rows:
+        sheet.merge_cells(start_row=row, start_column=1, end_row=row, end_column=15)
+        cell = sheet.cell(row=row, column=1, value=value)
+        cell.fill = title_fill
+        cell.font = Font(bold=bold, size=size, color="1F2937")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        sheet.row_dimensions[row].height = 22
+
+    summary_rows = [
+        ("Total Complaints", total),
+        ("Resolved", resolved),
+        ("Overdue", overdue),
+    ]
+    for index, (label, value) in enumerate(summary_rows, start=6):
+        sheet.cell(row=index, column=1, value=label)
+        sheet.cell(row=index, column=2, value=value)
+        for column in range(1, 3):
+            cell = sheet.cell(row=index, column=column)
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="left" if column == 1 else "center")
+        sheet.cell(row=index, column=1).font = Font(bold=True)
+
+    headers = [
+        "Case No",
+        "Title",
+        "Category",
+        "Priority",
+        "Status",
+        "Resident",
+        "Assignee",
+        "Location",
+        "Created Date",
+        "Created Time",
+        "Deadline Date",
+        "Deadline Time",
+        "Resolved Date",
+        "Resolved Time",
+        "SLA Status",
+    ]
+    header_row = 10
+    for column, label in enumerate(headers, start=1):
+        cell = sheet.cell(row=header_row, column=column, value=label)
+        cell.fill = header_fill
+        cell.font = Font(color="FFFFFF", bold=True)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = table_border
+
+    sheet.freeze_panes = f"A{header_row + 1}"
+    sheet.auto_filter.ref = f"A{header_row}:O{header_row}"
+
+    text_columns = {1, 2, 3, 5, 6, 7, 8, 15}
+    centered_columns = {4, 9, 10, 11, 12, 13, 14}
+    for row, complaint in enumerate(complaints.order_by("-created_at"), start=header_row + 1):
+        values = [
+            f"CMP-{complaint.id:05d}",
+            csv_safe_cell(complaint.title),
+            csv_safe_cell(complaint.category.name if complaint.category else "Uncategorized"),
+            complaint.get_priority_display(),
+            complaint.get_status_display(),
+            csv_safe_cell(complaint.resident.get_full_name() or complaint.resident.username),
+            csv_safe_cell(complaint.assigned_to.get_full_name() or complaint.assigned_to.username if complaint.assigned_to else "Unassigned"),
+            csv_safe_cell(complaint.incident_location),
+            format_csv_date(complaint.created_at),
+            format_csv_time(complaint.created_at),
+            format_csv_date(complaint.deadline_at),
+            format_csv_time(complaint.deadline_at),
+            format_csv_date(complaint.resolved_at),
+            format_csv_time(complaint.resolved_at),
+            complaint.sla_label,
+        ]
+        for column, value in enumerate(values, start=1):
+            cell = sheet.cell(row=row, column=column, value=value)
+            cell.fill = gray_fill if row % 2 == 0 else PatternFill(fill_type=None)
+            cell.border = table_border
+            cell.alignment = Alignment(
+                horizontal="center" if column in centered_columns else "left",
+                vertical="center",
+                wrap_text=column in text_columns,
+            )
+
+        status_cell = sheet.cell(row=row, column=5)
+        status_value = str(status_cell.value).lower()
+        if "resolved" in status_value or "closed" in status_value:
+            status_cell.fill = green_fill
+        elif complaint.is_overdue or "overdue" in str(complaint.sla_label).lower():
+            status_cell.fill = red_fill
+        elif "pending" in status_value:
+            status_cell.fill = orange_fill
+
+        priority_cell = sheet.cell(row=row, column=4)
+        priority_value = str(priority_cell.value).lower()
+        if priority_value == "urgent":
+            priority_cell.fill = red_fill
+        elif priority_value == "high":
+            priority_cell.fill = orange_fill
+        elif priority_value == "normal":
+            priority_cell.fill = yellow_fill
+
+    footer_row = header_row + total + 2
+    sheet.merge_cells(start_row=footer_row, start_column=1, end_row=footer_row, end_column=15)
+    footer_cell = sheet.cell(row=footer_row, column=1, value=BARANGAY_DOCUMENT_FOOTER)
+    footer_cell.font = Font(italic=True, color="475569")
+    footer_cell.alignment = Alignment(horizontal="center", vertical="center")
+    footer_cell.fill = PatternFill("solid", fgColor="EAF1F8")
+
+    widths = {
+        "A": 14,
+        "B": 30,
+        "C": 22,
+        "D": 14,
+        "E": 24,
+        "F": 25,
+        "G": 25,
+        "H": 30,
+        "I": 15,
+        "J": 15,
+        "K": 15,
+        "L": 15,
+        "M": 15,
+        "N": 15,
+        "O": 16,
+    }
+    for column, width in widths.items():
+        sheet.column_dimensions[column].width = width
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="barangay-cawitan-official-complaints-report.xlsx"'
+    workbook.save(response)
     return response
 
 
@@ -1614,79 +1915,206 @@ def reports_export_pdf_view(request):
     complaints, _, _ = get_report_complaints(request)
     try:
         from reportlab.lib import colors
-        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import mm
+        from reportlab.platypus import HRFlowable, Image, LongTable, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
         from reportlab.pdfgen import canvas
     except ImportError:
         messages.error(request, "PDF export needs reportlab. Install requirements.txt, then try again.")
         return redirect("complaints:reports")
 
+    class NumberedReportCanvas(canvas.Canvas):
+        def __init__(self, *args, generated_label="", **kwargs):
+            super().__init__(*args, **kwargs)
+            self.generated_label = generated_label
+            self._saved_page_states = []
+
+        def showPage(self):
+            self._saved_page_states.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            self._saved_page_states.append(dict(self.__dict__))
+            page_total = len(self._saved_page_states)
+            for state in self._saved_page_states:
+                self.__dict__.update(state)
+                self.draw_footer(page_total)
+                canvas.Canvas.showPage(self)
+            canvas.Canvas.save(self)
+
+        def draw_footer(self, page_total):
+            width, _ = landscape(A4)
+            margin = 12 * mm
+            self.setStrokeColor(colors.HexColor("#1E3A5F"))
+            self.setLineWidth(0.8)
+            self.line(margin, 10.8 * mm, width - margin, 10.8 * mm)
+            self.setFillColor(colors.HexColor("#6B7280"))
+            self.setFont("Helvetica-Oblique", 8)
+            self.drawString(margin, 6.5 * mm, "Barangay Cawitan - Official Use Only")
+            self.drawCentredString(width / 2, 6.5 * mm, f"Page {self._pageNumber} of {page_total}")
+            self.drawRightString(width - margin, 6.5 * mm, self.generated_label)
+
+    def priority_indicator(priority, style):
+        palette = {
+            "Urgent": "#DC2626",
+            "High": "#F97316",
+            "Normal": "#9CA3AF",
+            "Low": "#9CA3AF",
+        }
+        dot_color = palette.get(str(priority), "#9CA3AF")
+        return Paragraph(f'<font color="{dot_color}">&#9679;</font> {escape(str(priority))}', style)
+
+    def status_text(status, sla_label, is_overdue, style):
+        value = str(status)
+        color = "#475569"
+        if value == "Pending Review":
+            color = "#F97316"
+        elif value == "Second Notice Sent" or is_overdue or str(sla_label).lower() == "overdue":
+            color = "#DC2626"
+        elif value == "Resolved":
+            color = "#16A34A"
+        return Paragraph(f'<font color="{color}">{escape(value)}</font>', style)
+
+    def sla_text(label, style):
+        palette = {
+            "On track": "#16A34A",
+            "Closed": "#6B7280",
+            "Overdue": "#DC2626",
+        }
+        return Paragraph(f'<font color="{palette.get(str(label), "#475569")}">{escape(str(label))}</font>', style)
+
+    def row_priority_color(priority):
+        if priority == "Urgent":
+            return colors.HexColor("#DC2626")
+        if priority == "High":
+            return colors.HexColor("#F97316")
+        return colors.HexColor("#D1D5DB")
+
+    include_detail_pages = str(request.GET.get("includeDetailPages", "")).lower() in {"1", "true", "yes", "on"}
+    overview_complaints = list(complaints.order_by("-created_at"))
     buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-    page_number = 1
-    generated_by = request.user.get_full_name() or request.user.username
-    y = draw_official_pdf_header(
-        pdf,
-        width=width,
-        height=height,
-        title="Official Complaint Monitoring Report",
-        subtitle="Barangay Cawitan Complaint Summary and Case Register",
-        generated_by=generated_by,
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        leftMargin=12 * mm,
+        rightMargin=12 * mm,
+        topMargin=12 * mm,
+        bottomMargin=14 * mm,
     )
-    total = complaints.count()
-    resolved = complaints.filter(status=Complaint.Status.RESOLVED).count()
-    overdue = sum(1 for complaint in complaints if complaint.is_overdue)
-    pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawString(50, y, f"Total Complaints: {total}")
-    pdf.drawString(190, y, f"Resolved: {resolved}")
-    pdf.drawString(300, y, f"Overdue: {overdue}")
-    pdf.drawRightString(width - 50, y, f"Filters: {request.GET.urlencode() or 'None'}")
-    y -= 22
-    pdf.setFillColor(colors.HexColor("#1E3A8A"))
-    pdf.rect(50, y - 4, width - 100, 18, fill=1, stroke=0)
-    pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 8)
-    headers = [("Case No.", 54), ("Title", 105), ("Status", 260), ("Priority", 360), ("Filed", 430), ("SLA", 500)]
-    for label, x in headers:
-        pdf.drawString(x, y, label)
-    pdf.setFillColor(colors.black)
-    y -= 18
-    pdf.setFont("Helvetica", 8)
-    for complaint in complaints.order_by("-created_at")[:80]:
-        if y < 60:
-            draw_official_pdf_footer(pdf, width=width, page_number=page_number)
-            pdf.showPage()
-            page_number += 1
-            y = draw_official_pdf_header(
-                pdf,
-                width=width,
-                height=height,
-                title="Official Complaint Monitoring Report",
-                subtitle="Barangay Cawitan Complaint Summary and Case Register",
-                generated_by=generated_by,
-            )
-            pdf.setFillColor(colors.HexColor("#1E3A8A"))
-            pdf.rect(50, y - 4, width - 100, 18, fill=1, stroke=0)
-            pdf.setFillColor(colors.white)
-            pdf.setFont("Helvetica-Bold", 8)
-            for label, x in headers:
-                pdf.drawString(x, y, label)
-            pdf.setFillColor(colors.black)
-            y -= 18
-            pdf.setFont("Helvetica", 8)
-        values = (
-            f"CMP-{complaint.id:05d}",
-            complaint.title[:38],
-            complaint.get_status_display()[:18],
-            complaint.get_priority_display(),
-            f"{complaint.created_at:%Y-%m-%d}",
-            complaint.sla_label,
-        )
-        for value, (_, x) in zip(values, headers):
-            pdf.drawString(x, y, str(value))
-        y -= 14
-    draw_official_pdf_footer(pdf, width=width, page_number=page_number)
-    pdf.save()
+
+    generated_by = request.user.get_full_name() or request.user.username
+    generated_at = timezone.localtime(timezone.now())
+    generated_at_label = generated_at.strftime("%B %d, %Y %I:%M %p")
+    filters = get_report_filter_summary(request)
+    total = len(overview_complaints)
+    resolved = sum(1 for complaint in overview_complaints if complaint.status == Complaint.Status.RESOLVED)
+    overdue = sum(1 for complaint in overview_complaints if complaint.is_overdue)
+    filter_text = "; ".join(f"{label}: {value}" for label, value in filters) if filters else "None"
+    styles = getSampleStyleSheet()
+    title_color = colors.HexColor("#1E3A5F")
+    muted = colors.HexColor("#555555")
+    story = []
+
+    letterhead_style = ParagraphStyle("Letterhead", parent=styles["Normal"], fontName="Helvetica", fontSize=9, leading=11, alignment=TA_CENTER, textColor=colors.HexColor("#334155"))
+    barangay_style = ParagraphStyle("BarangayTitle", parent=letterhead_style, fontName="Helvetica-Bold", fontSize=16, leading=18, textColor=title_color)
+    subtitle_style = ParagraphStyle("BarangaySubtitle", parent=letterhead_style, fontName="Helvetica-Oblique", fontSize=10, leading=12, textColor=muted)
+    report_title_style = ParagraphStyle("ReportTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=18, leading=21, alignment=TA_CENTER, textColor=title_color)
+    report_subtitle_style = ParagraphStyle("ReportSubtitle", parent=styles["Normal"], fontName="Helvetica", fontSize=10, leading=12, alignment=TA_CENTER, textColor=muted)
+    meta_style_left = ParagraphStyle("MetaLeft", parent=styles["Normal"], fontName="Helvetica", fontSize=9, leading=11, alignment=TA_LEFT, textColor=colors.HexColor("#1F2937"))
+    meta_style_right = ParagraphStyle("MetaRight", parent=meta_style_left, alignment=TA_RIGHT)
+    stat_value_style = ParagraphStyle("StatValue", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=15, leading=17, alignment=TA_CENTER, textColor=title_color)
+    stat_label_style = ParagraphStyle("StatLabel", parent=styles["Normal"], fontName="Helvetica", fontSize=8, leading=10, alignment=TA_CENTER, textColor=colors.HexColor("#475569"))
+    table_header_style = ParagraphStyle("ReportTableHeader", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=9, leading=10, alignment=TA_CENTER, textColor=colors.white)
+    cell_text_style = ParagraphStyle("ReportCell", parent=styles["Normal"], fontName="Helvetica", fontSize=8.5, leading=9, alignment=TA_LEFT, textColor=colors.HexColor("#0F172A"))
+    detail_label_style = ParagraphStyle("DetailLabel", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=8.5, leading=10, textColor=title_color)
+    detail_value_style = ParagraphStyle("DetailValue", parent=styles["Normal"], fontName="Helvetica", fontSize=8.5, leading=10, textColor=colors.HexColor("#1F2937"))
+    detail_section_style = ParagraphStyle("DetailSection", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=11, leading=13, textColor=title_color)
+
+    seal_image = Image(build_report_pdf_seal(), width=22 * mm, height=22 * mm)
+    letterhead_copy = [
+        Paragraph(escape(BARANGAY_DOCUMENT_HEADER[0]), letterhead_style),
+        Paragraph(escape(BARANGAY_DOCUMENT_HEADER[1]), letterhead_style),
+        Paragraph(escape(BARANGAY_DOCUMENT_HEADER[2]), letterhead_style),
+        Paragraph(escape(BARANGAY_DOCUMENT_HEADER[3]), barangay_style),
+        Paragraph(escape(BARANGAY_OFFICE_NAME), subtitle_style),
+    ]
+    story.append(Table([[seal_image, letterhead_copy]], colWidths=[26 * mm, document.width - (26 * mm)], style=TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("ALIGN", (0, 0), (0, 0), "CENTER"), ("ALIGN", (1, 0), (1, 0), "CENTER"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)])))
+    story.append(Spacer(1, 4 * mm))
+    story.append(HRFlowable(width="100%", thickness=2, color=title_color, spaceBefore=0, spaceAfter=0))
+    story.append(Spacer(1, 5 * mm))
+    story.append(Table([[[Paragraph("OFFICIAL COMPLAINT MONITORING REPORT", report_title_style), Spacer(1, 1.5 * mm), Paragraph("Barangay Cawitan Complaint Summary and Case Register", report_subtitle_style)]]], colWidths=[document.width], style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F4F6")), ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 9), ("BOTTOMPADDING", (0, 0), (-1, -1), 9)])))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Table([[Paragraph(f"<b>Generated:</b> {escape(generated_at_label)}", meta_style_left), Paragraph(f"<b>Generated by:</b> {escape(generated_by)}", meta_style_right)]], colWidths=[document.width / 2.0, document.width / 2.0], style=TableStyle([("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)])))
+    story.append(Spacer(1, 3 * mm))
+    story.append(Table([[Paragraph(f"<b>Total:</b> {total}", meta_style_left), Paragraph(f"<b>Resolved:</b> {resolved}", meta_style_left), Paragraph(f"<b>Overdue:</b> {overdue}", meta_style_left), Paragraph(f"<b>Filters:</b> {escape(filter_text)}", meta_style_left)]], colWidths=[22 * mm, 24 * mm, 23 * mm, document.width - 69 * mm], style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFF6FF")), ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#BFDBFE")), ("LINEBEFORE", (1, 0), (-1, 0), 0.6, colors.HexColor("#BFDBFE")), ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5), ("VALIGN", (0, 0), (-1, -1), "MIDDLE")])))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Table([[ [Paragraph(str(value), stat_value_style), Spacer(1, 1 * mm), Paragraph(label, stat_label_style)] for value, label in ((total, "Total Complaints"), (resolved, "Resolved"), (overdue, "Overdue"), (len(filters), "Applied Filters")) ]], colWidths=[document.width / 4.0] * 4, style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#DBEAFE")), ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#BFDBFE")), ("INNERGRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#BFDBFE")), ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7), ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8)])))
+    story.append(Spacer(1, 5 * mm))
+
+    table_data = [[Paragraph(escape(label), table_header_style) for label in ["Case No", "Title", "Category", "Priority", "Status", "Resident", "Assignee", "Location", "Filed Date", "Deadline Date", "SLA Status"]]]
+    for complaint in overview_complaints:
+        table_data.append([
+            truncate_report_pdf_text(f"CMP-{complaint.id:05d}", 12),
+            truncate_report_pdf_text(complaint.title, 32),
+            truncate_report_pdf_text(complaint.category.name if complaint.category else "Uncategorized", 20),
+            priority_indicator(complaint.get_priority_display(), cell_text_style),
+            status_text(complaint.get_status_display(), complaint.sla_label, complaint.is_overdue, cell_text_style),
+            truncate_report_pdf_text(complaint.resident.get_full_name() or complaint.resident.username, 22),
+            truncate_report_pdf_text(complaint.assigned_to.get_full_name() or complaint.assigned_to.username if complaint.assigned_to else "Unassigned", 22),
+            truncate_report_pdf_text(complaint.incident_location, 24),
+            format_report_pdf_date(complaint.created_at),
+            format_report_pdf_date(complaint.deadline_at),
+            sla_text(complaint.sla_label, cell_text_style),
+        ])
+
+    report_table = LongTable(table_data, colWidths=[18 * mm, 35 * mm, 22 * mm, 18 * mm, 28 * mm, 25 * mm, 25 * mm, 28 * mm, 20 * mm, 22 * mm, 18 * mm], rowHeights=[10 * mm] * len(table_data), repeatRows=1)
+    report_style_commands = [("BACKGROUND", (0, 0), (-1, 0), title_color), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white), ("ALIGN", (0, 0), (-1, 0), "CENTER"), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4), ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("FONTSIZE", (0, 0), (-1, 0), 9), ("FONTNAME", (0, 1), (-1, -1), "Helvetica"), ("FONTSIZE", (0, 1), (-1, -1), 8.5), ("LINEBELOW", (0, 0), (-1, -1), 0.35, colors.HexColor("#E2E8F0")), ("LINEABOVE", (0, 0), (-1, 0), 0.35, title_color), ("ALIGN", (0, 1), (0, -1), "CENTER"), ("ALIGN", (8, 1), (10, -1), "CENTER")]
+    for row_index, complaint in enumerate(overview_complaints, start=1):
+        report_style_commands.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.white if row_index % 2 else colors.HexColor("#F8FAFC")))
+        report_style_commands.append(("LINEBEFORE", (0, row_index), (0, row_index), 3, row_priority_color(complaint.get_priority_display())))
+    report_table.setStyle(TableStyle(report_style_commands))
+    story.append(report_table)
+
+    if include_detail_pages and overview_complaints:
+        story.append(PageBreak())
+        story.append(Paragraph("Full Case Detail", detail_section_style))
+        story.append(Spacer(1, 3 * mm))
+        for index, complaint in enumerate(overview_complaints):
+            feedback = getattr(complaint, "feedback", None)
+            comment_lines = []
+            if feedback and feedback.comments:
+                comment_lines.append(feedback.comments)
+            if complaint.fee_notes:
+                comment_lines.append(complaint.fee_notes)
+            detail_rows = [
+                ("Case No", f"CMP-{complaint.id:05d}"),
+                ("Title", complaint.title),
+                ("Category", complaint.category.name if complaint.category else "Uncategorized"),
+                ("Priority", complaint.get_priority_display()),
+                ("Status", complaint.get_status_display()),
+                ("Resident", complaint.resident.get_full_name() or complaint.resident.username),
+                ("Assignee", complaint.assigned_to.get_full_name() or complaint.assigned_to.username if complaint.assigned_to else "Unassigned"),
+                ("Location", complaint.incident_location),
+                ("Filed Date", format_report_pdf_date(complaint.created_at)),
+                ("Created Time", format_report_pdf_time(complaint.created_at)),
+                ("Deadline Date", format_report_pdf_date(complaint.deadline_at)),
+                ("Deadline Time", format_report_pdf_time(complaint.deadline_at)),
+                ("Resolved Date", format_report_pdf_date(complaint.resolved_at)),
+                ("Resolved Time", format_report_pdf_time(complaint.resolved_at)),
+                ("SLA Status", complaint.sla_label),
+                ("Description", complaint.description or "-"),
+                ("Public Remarks", complaint.public_remarks or "-"),
+                ("Internal Remarks", complaint.internal_remarks or "-"),
+                ("Second Notice Remarks", complaint.second_notice_remarks or "-"),
+                ("Comments", " | ".join(comment_lines) if comment_lines else "-"),
+            ]
+            story.append(Table([[Paragraph(escape(label), detail_label_style), Paragraph(escape(" ".join(str(value or "").split())), detail_value_style)] for label, value in detail_rows], colWidths=[30 * mm, document.width - (30 * mm)], style=TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EFF6FF")), ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")), ("LINEBELOW", (0, 0), (-1, -1), 0.35, colors.HexColor("#E2E8F0")), ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)])))
+            if index != len(overview_complaints) - 1:
+                story.append(Spacer(1, 4 * mm))
+
+    document.build(story, canvasmaker=lambda *args, **kwargs: NumberedReportCanvas(*args, generated_label=generated_at.strftime("%b %d, %Y"), **kwargs))
     buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = 'attachment; filename="barangay-cawitan-official-complaints-report.pdf"'

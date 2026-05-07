@@ -38,7 +38,7 @@
                 {% elif profile_form.instance.verification_status == "REJECTED" %}
                     Update your details or valid ID, then save again to request another review.
                 {% else %}
-                    Fill in your name, email, phone number, address, birth date, and upload the front and back of your valid ID, then save to request verification.
+                    Fill in your name, email, phone number, address, birth date, choose the valid ID type, and upload the front and back of that ID, then save to request verification.
                 {% endif %}
             </p>
             {% if profile_form.instance.verification_notes %}
@@ -84,6 +84,9 @@
                     <div class="col-md-6 mb-3 account-form-field">
                         <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
                         {% for error in field.errors %}
                             <div class="text-danger small mt-1">{{ error }}</div>
                         {% endfor %}

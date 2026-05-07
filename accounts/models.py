@@ -34,12 +34,28 @@ class ResidentProfile(models.Model):
         VERIFIED = "VERIFIED", "Verified"
         REJECTED = "REJECTED", "Rejected"
 
+    class ValidIDType(models.TextChoices):
+        NATIONAL_ID = "NATIONAL_ID", "National ID"
+        VOTERS_ID = "VOTERS_ID", "Voter's ID"
+        DRIVERS_LICENSE = "DRIVERS_LICENSE", "Driver's License"
+        PASSPORT = "PASSPORT", "Passport"
+        UMID = "UMID", "UMID"
+        SSS_ID = "SSS_ID", "SSS ID"
+        PHILHEALTH_ID = "PHILHEALTH_ID", "PhilHealth ID"
+        POSTAL_ID = "POSTAL_ID", "Postal ID"
+        SENIOR_CITIZEN_ID = "SENIOR_CITIZEN_ID", "Senior Citizen ID"
+        PWD_ID = "PWD_ID", "PWD ID"
+        STUDENT_ID = "STUDENT_ID", "Student ID"
+        BARANGAY_ID = "BARANGAY_ID", "Barangay ID"
+        OTHER = "OTHER", "Other government-issued ID"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="resident_profile")
     phone_number = models.CharField(max_length=20, blank=True)
     address = models.CharField(max_length=255)
     purok = models.CharField(max_length=100, blank=True)
     household_number = models.CharField(max_length=50, blank=True)
     birth_date = models.DateField(null=True, blank=True)
+    valid_id_type = models.CharField(max_length=30, choices=ValidIDType.choices, blank=True)
     valid_id_front_image = models.ImageField(upload_to="resident_ids/", null=True, blank=True)
     valid_id_back_image = models.ImageField(upload_to="resident_ids/", null=True, blank=True)
     verification_status = models.CharField(

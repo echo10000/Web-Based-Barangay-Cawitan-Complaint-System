@@ -7,9 +7,6 @@
         <h1>Residents</h1>
         <p>Registered resident accounts and contact details.</p>
     </div>
-    <button class="btn btn-outline-primary" type="button" onclick="window.print()">
-        <i class="bi bi-printer-fill me-1"></i>Print Directory
-    </button>
 </div>
 
 <div class="stats-grid entity-stats-grid">
@@ -233,7 +230,9 @@
                                     {% endif %}
                                     <form method="post"
                                           action="{% url 'accounts:toggle_account_status' resident.pk %}"
-                                          onsubmit="return confirm('This changes login access for {{ resident.get_full_name|default:resident.username|escapejs }}. Continue?');">
+                                          data-account-status-confirm="true"
+                                          data-account-name="{{ resident.get_full_name|default:resident.username }}"
+                                          data-account-action="{% if resident.is_active %}deactivate{% else %}activate{% endif %}">
                                         {% csrf_token %}
                                         <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-red-500 hover:!bg-red-50">
                                             <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
@@ -261,6 +260,7 @@
             </tbody>
         </table>
     </div>
+    {% include "pagination.html" %}
 </div>
 </div>
 {% endblock %}

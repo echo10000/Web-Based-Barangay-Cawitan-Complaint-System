@@ -13,7 +13,7 @@
 {% url 'complaints:categories' as url_categories %}
 {% url 'accounts:logout'      as url_logout %}
 
-<aside class="app-sidebar">
+<aside class="app-sidebar" id="appSidebar" aria-label="Primary navigation">
 
     {# ─────────────────────────────────────────────── #}
     {# ADMIN — checked FIRST so superusers whose role  #}
@@ -74,8 +74,8 @@
 
         <a href="{{ url_profile }}"
            class="sidebar-link {% if request.path == url_profile %}active{% endif %}">
-            <i class="bi bi-person-gear"></i>
-            <span>Edit Profile</span>
+            <i class="bi bi-shield-lock-fill"></i>
+            <span>Admin Account</span>
         </a>
 
         <form method="post" action="{{ url_logout }}" class="sidebar-logout-form">

@@ -1,11 +1,13 @@
 import random
 
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.views import LoginView
 from django.core.mail import send_mail
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -15,6 +17,7 @@ from django.utils.crypto import get_random_string
 
 from .forms import (
     AdminAccountForm,
+    AdminSelfAccountForm,
     LoginForm,
     ResidentAdminProfileForm,
     ResidentProfileForm,
@@ -25,7 +28,7 @@ from .forms import (
     UserProfileForm,
 )
 from .models import PasswordResetOTP, ResidentProfile, StaffProfile, User
-from complaints.models import ActivityLog
+from complaints.models import ActivityLog, Complaint, ComplaintCategory
 from complaints.services import log_activity
 
 
@@ -33,6 +36,16 @@ PASSWORD_RESET_USER_SESSION_KEY = "password_reset_user_id"
 PASSWORD_RESET_VERIFIED_SESSION_KEY = "password_reset_verified_user_id"
 OTP_RESEND_COOLDOWN_SECONDS = 60
 OTP_MAX_ATTEMPTS = 5
+ACCOUNTS_PER_PAGE = 10
+
+
+def paginate_queryset(request, queryset, per_page=ACCOUNTS_PER_PAGE):
+    paginator = Paginator(queryset, per_page)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    page_range = paginator.get_elided_page_range(page_obj.number, on_each_side=1, on_ends=1)
+    return page_obj, query_params.urlencode(), page_range
 
 
 def _generate_otp():
@@ -233,6 +246,56 @@ def set_new_password_view(request):
 
 @login_required
 def profile_view(request):
+    if request.user.is_barangay_admin:
+        updating_password = request.method == "POST" and request.POST.get("form_type") == "password"
+        updating_account = request.method == "POST" and request.POST.get("form_type") == "account"
+        user_form = AdminSelfAccountForm(request.POST if updating_account else None, instance=request.user)
+        password_form = PasswordChangeForm(request.user, request.POST if updating_password else None)
+        for field in password_form.fields.values():
+            field.widget.attrs.update({"class": "form-control"})
+
+        if updating_account and user_form.is_valid():
+            user_form.save()
+            log_activity(
+                actor=request.user,
+                action=ActivityLog.Action.ACCOUNT_UPDATED,
+                target=request.user,
+                summary=f"Admin account settings updated for {request.user.username}.",
+            )
+            messages.success(request, "Admin account settings updated successfully.")
+            return redirect("accounts:profile")
+
+        if updating_password and password_form.is_valid():
+            user = password_form.save()
+            update_session_auth_hash(request, user)
+            log_activity(
+                actor=request.user,
+                action=ActivityLog.Action.PASSWORD_RESET,
+                target=request.user,
+                summary=f"Admin password changed for {request.user.username}.",
+            )
+            messages.success(request, "Admin password changed successfully.")
+            return redirect("accounts:profile")
+
+        context = {
+            "user_form": user_form,
+            "password_form": password_form,
+            "total_residents": User.objects.filter(role=User.Role.RESIDENT).count(),
+            "total_staff": User.objects.filter(role=User.Role.STAFF).count(),
+            "active_categories": ComplaintCategory.objects.filter(is_active=True).count(),
+            "open_complaints": Complaint.objects.exclude(
+                status__in=[
+                    Complaint.Status.RESOLVED,
+                    Complaint.Status.UNRESOLVED,
+                    Complaint.Status.ESCALATED,
+                    Complaint.Status.CLOSED,
+                    Complaint.Status.REJECTED,
+                ]
+            ).count(),
+            "recent_activity": ActivityLog.objects.filter(actor=request.user)[:6],
+        }
+        return render(request, "accounts/admin_account.html", context)
+
     user_form = UserProfileForm(request.POST or None, instance=request.user)
     profile_form = None
 
@@ -259,6 +322,7 @@ def profile_view(request):
                         profile.phone_number,
                         profile.address,
                         profile.birth_date,
+                        profile.valid_id_type,
                         profile.valid_id_front_image,
                         profile.valid_id_back_image,
                     ]
@@ -498,14 +562,19 @@ def resident_management_view(request):
             | Q(resident_profile__valid_id_back_image="")
             | Q(resident_profile__valid_id_back_image__isnull=True)
         )
+    filtered_count = residents.count()
+    page_obj, pagination_querystring, pagination_range = paginate_queryset(request, residents)
     return render(
         request,
         "accounts/resident_management.html",
         {
-            "residents": residents,
+            "residents": page_obj.object_list,
+            "page_obj": page_obj,
+            "pagination_querystring": pagination_querystring,
+            "pagination_range": pagination_range,
             "search_query": search,
             "total_residents": total_residents,
-            "filtered_count": residents.count(),
+            "filtered_count": filtered_count,
             "complete_profiles": complete_profiles,
             "incomplete_profiles": total_residents - complete_profiles,
             "verified_residents": verified_residents,
@@ -537,14 +606,19 @@ def staff_management_view(request):
             | Q(staff_profile__department__icontains=search)
             | Q(staff_profile__phone_number__icontains=search)
         )
+    filtered_count = staff.count()
+    page_obj, pagination_querystring, pagination_range = paginate_queryset(request, staff)
     return render(
         request,
         "accounts/staff_management.html",
         {
-            "staff": staff,
+            "staff": page_obj.object_list,
+            "page_obj": page_obj,
+            "pagination_querystring": pagination_querystring,
+            "pagination_range": pagination_range,
             "search_query": search,
             "total_staff": total_staff,
-            "filtered_count": staff.count(),
+            "filtered_count": filtered_count,
             "available_staff": available_staff,
             "busy_staff": busy_staff,
         },

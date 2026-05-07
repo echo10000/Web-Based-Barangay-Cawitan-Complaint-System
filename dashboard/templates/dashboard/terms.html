@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Terms | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="info-page">
+    <div class="page-header page-header-row">
+        <div>
+            <h1>Terms</h1>
+            <p>Guidelines for using the Barangay Cawitan Complaint Management System.</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{% url 'dashboard:home' %}">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+
+    <div class="content-card info-document">
+        <section>
+            <h2>Proper Use</h2>
+            <p>The system is intended for legitimate barangay complaint submissions, case tracking, staff processing, administrative monitoring, and official reporting.</p>
+        </section>
+        <section>
+            <h2>Accurate Information</h2>
+            <p>Users must provide truthful and complete information. False, misleading, abusive, or unrelated submissions may be rejected, closed, or referred for appropriate action.</p>
+        </section>
+        <section>
+            <h2>Account Responsibility</h2>
+            <p>Each user is responsible for keeping their account secure. Do not share passwords or use another person's account without authorization.</p>
+        </section>
+        <section>
+            <h2>Complaint Handling</h2>
+            <p>Complaint status, assignment, remarks, notices, hearing details, fees, and resolution records may be updated by authorized staff or admin users as the case progresses.</p>
+        </section>
+        <section>
+            <h2>System Availability</h2>
+            <p>The system may be unavailable during maintenance, technical issues, or connectivity interruptions. Urgent matters should be raised directly with the barangay office.</p>
+        </section>
+    </div>
+</div>
+{% endblock %}
