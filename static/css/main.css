@@ -4324,6 +4324,64 @@ button,
     font-weight: 800;
 }
 
+.resident-id-preview {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    margin-top: 8px;
+    padding: 16px;
+}
+
+.resident-id-preview-header {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.resident-id-preview-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.resident-id-preview-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px;
+}
+
+.resident-id-preview-card a {
+    display: block;
+}
+
+.resident-id-preview-card img {
+    aspect-ratio: 16 / 10;
+    background: #EEF2F7;
+    border-radius: 10px;
+    display: block;
+    object-fit: contain;
+    width: 100%;
+}
+
+.resident-id-preview-empty {
+    align-items: center;
+    background: #F1F5F9;
+    border: 1px dashed #CBD5E1;
+    border-radius: 10px;
+    color: #64748B;
+    display: flex;
+    font-size: 13px;
+    min-height: 150px;
+    padding: 16px;
+    text-align: center;
+}
+
 .workflow-command {
     display: grid;
     gap: 18px;
@@ -4864,6 +4922,15 @@ button,
     }
 
     .resident-fee-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .resident-id-preview-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .resident-id-preview-grid {
         grid-template-columns: 1fr;
     }
 

@@ -93,6 +93,41 @@
                     </div>
                 {% endfor %}
                 </div>
+                {% if user.is_resident %}
+                    <div class="resident-id-preview">
+                        <div class="resident-id-preview-header">
+                            <div>
+                                <p class="entity-card-title">Uploaded valid ID</p>
+                                <p class="entity-card-subtitle">These images are saved on the server, so they can be viewed from another device after you sign in.</p>
+                            </div>
+                            {% if profile_form.instance.valid_id_type %}
+                                <span class="entity-chip">{{ profile_form.instance.get_valid_id_type_display }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="resident-id-preview-grid">
+                            <div class="resident-id-preview-card">
+                                <span class="verification-id-label">Front side</span>
+                                {% if profile_form.instance.valid_id_front_image %}
+                                    <a href="{{ profile_form.instance.valid_id_front_image.url }}" target="_blank" rel="noopener">
+                                        <img src="{{ profile_form.instance.valid_id_front_image.url }}" alt="Uploaded valid ID front side">
+                                    </a>
+                                {% else %}
+                                    <div class="resident-id-preview-empty">No front image uploaded.</div>
+                                {% endif %}
+                            </div>
+                            <div class="resident-id-preview-card">
+                                <span class="verification-id-label">Back side</span>
+                                {% if profile_form.instance.valid_id_back_image %}
+                                    <a href="{{ profile_form.instance.valid_id_back_image.url }}" target="_blank" rel="noopener">
+                                        <img src="{{ profile_form.instance.valid_id_back_image.url }}" alt="Uploaded valid ID back side">
+                                    </a>
+                                {% else %}
+                                    <div class="resident-id-preview-empty">No back image uploaded.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
             {% endif %}
         <div class="form-action-bar">
