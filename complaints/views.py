@@ -300,6 +300,7 @@ def complaint_list_view(request):
         if search.isdigit():
             search_filter |= Q(id=int(search))
         complaints = complaints.filter(search_filter)
+    complaints = complaints.order_by("-created_at", "-id")
     status_counts = {
         item["status"]: item["total"]
         for item in all_complaints.values("status").annotate(total=Count("id"))
