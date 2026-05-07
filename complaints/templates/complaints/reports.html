@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Reports | Barangay Cawitan{% endblock %}
 {% block content %}
+<div class="official-print-header">
+    <div class="official-print-seal">BC</div>
+    <div>
+        <p>Republic of the Philippines</p>
+        <p>Province of Cebu</p>
+        <p>Municipality of Santa Fe</p>
+        <h2>Barangay Cawitan</h2>
+        <strong>Office of the Barangay Cawitan Complaint Management System</strong>
+        <h1>Official Complaint Monitoring Report</h1>
+        <p>Generated {{ generated_at|date:"F d, Y h:i A" }} by {{ generated_by }}</p>
+    </div>
+</div>
 <div class="page-header page-header-row">
     <div>
         <h1>Reports</h1>

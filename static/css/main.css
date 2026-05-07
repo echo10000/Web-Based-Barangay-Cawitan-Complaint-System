@@ -4677,6 +4677,57 @@ button,
 }
 
 @media print {
+    .official-print-header {
+        align-items: center;
+        border-bottom: 2px solid #1E3A8A;
+        display: flex !important;
+        gap: 18px;
+        justify-content: center;
+        margin: 0 0 22px;
+        padding: 0 0 18px;
+        text-align: center;
+    }
+
+    .official-print-seal {
+        align-items: center;
+        border: 2px solid #1E3A8A;
+        border-radius: 999px;
+        color: #1E3A8A;
+        display: flex;
+        font-size: 18px;
+        font-weight: 800;
+        height: 74px;
+        justify-content: center;
+        width: 74px;
+    }
+
+    .official-print-header p {
+        font-size: 11px;
+        line-height: 1.25;
+        margin: 0;
+    }
+
+    .official-print-header h2 {
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        margin: 2px 0;
+        text-transform: uppercase;
+    }
+
+    .official-print-header strong {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+
+    .official-print-header h1 {
+        font-size: 20px;
+        font-weight: 800;
+        margin: 0 0 4px;
+        text-transform: uppercase;
+    }
+
     .app-navbar,
     .app-sidebar,
     .app-footer,
@@ -4694,6 +4745,10 @@ button,
     .stat-card {
         box-shadow: none !important;
     }
+}
+
+.official-print-header {
+    display: none;
 }
 
 /* ================================================
