@@ -174,10 +174,9 @@ class ResidentVerificationForm(forms.ModelForm):
 class StaffProfileForm(forms.ModelForm):
     class Meta:
         model = StaffProfile
-        fields = ["position", "department", "availability", "specialization_categories", "phone_number"]
+        fields = ["position", "availability", "specialization_categories", "phone_number"]
         widgets = {
             "position": forms.TextInput(attrs={"class": "form-control"}),
-            "department": forms.TextInput(attrs={"class": "form-control"}),
             "availability": forms.Select(attrs={"class": "form-select"}),
             "specialization_categories": forms.SelectMultiple(attrs={"class": "form-select", "size": 5}),
             "phone_number": forms.TextInput(attrs={"class": "form-control"}),
@@ -191,7 +190,6 @@ class StaffProfileForm(forms.ModelForm):
 
 class StaffAccountForm(UserCreationForm):
     position = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
-    department = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     availability = forms.ChoiceField(
         choices=StaffProfile.Availability.choices,
         required=False,
@@ -229,7 +227,6 @@ class StaffAccountForm(UserCreationForm):
             staff_profile = StaffProfile.objects.create(
                 user=user,
                 position=self.cleaned_data.get("position", ""),
-                department=self.cleaned_data.get("department", ""),
                 availability=self.cleaned_data.get("availability") or StaffProfile.Availability.AVAILABLE,
                 phone_number=self.cleaned_data.get("phone_number", ""),
             )

@@ -118,28 +118,24 @@ def resident_help_view(request):
                 "description": "Loud music, disturbance, or repeated neighborhood noise.",
                 "default_priority": "NORMAL",
                 "target_resolution_hours": 72,
-                "responsible_department": "Barangay Desk",
             },
             {
                 "name": "Garbage & Sanitation",
                 "description": "Waste collection, cleanliness, drainage odor, or sanitation concerns.",
                 "default_priority": "NORMAL",
                 "target_resolution_hours": 72,
-                "responsible_department": "Sanitation",
             },
             {
                 "name": "Road, Lighting, or Obstruction",
                 "description": "Street lighting, road hazards, blocked pathways, or drainage issues.",
                 "default_priority": "HIGH",
                 "target_resolution_hours": 48,
-                "responsible_department": "Public Works",
             },
             {
                 "name": "Safety & Security",
                 "description": "Public safety concerns that need barangay attention.",
                 "default_priority": "URGENT",
                 "target_resolution_hours": 24,
-                "responsible_department": "Barangay Tanod",
             },
         ]
 

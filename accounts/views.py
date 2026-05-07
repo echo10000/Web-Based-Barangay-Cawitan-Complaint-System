@@ -595,7 +595,6 @@ def staff_management_view(request):
     search = request.GET.get("q", "").strip()
     total_staff = staff.count()
     available_staff = staff.filter(staff_profile__availability=StaffProfile.Availability.AVAILABLE).count()
-    busy_staff = staff.filter(staff_profile__availability=StaffProfile.Availability.BUSY).count()
     if search:
         staff = staff.filter(
             Q(first_name__icontains=search)
@@ -603,7 +602,6 @@ def staff_management_view(request):
             | Q(username__icontains=search)
             | Q(email__icontains=search)
             | Q(staff_profile__position__icontains=search)
-            | Q(staff_profile__department__icontains=search)
             | Q(staff_profile__phone_number__icontains=search)
         )
     filtered_count = staff.count()
@@ -620,6 +618,5 @@ def staff_management_view(request):
             "total_staff": total_staff,
             "filtered_count": filtered_count,
             "available_staff": available_staff,
-            "busy_staff": busy_staff,
         },
     )

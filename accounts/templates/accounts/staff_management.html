@@ -29,14 +29,6 @@
         <strong>{{ available_staff }}</strong>
         <p class="stat-card-desc">Ready for assignments</p>
     </div>
-    <div class="stat-card stat-card--pending">
-        <div class="stat-card-icon-wrap stat-card-icon-wrap--warning">
-            <i class="bi bi-hourglass-split"></i>
-        </div>
-        <span>Busy</span>
-        <strong>{{ busy_staff }}</strong>
-        <p class="stat-card-desc">Currently limited</p>
-    </div>
 </div>
 
 <div class="content-card entity-toolbar-card account-toolbar-card mb-3">
@@ -45,7 +37,7 @@
             <label class="form-label" for="staff-search">Search staff</label>
             <div class="complaint-search-input-wrap">
                 <i class="bi bi-search"></i>
-                <input id="staff-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search name, username, position, department, email, or phone" autocomplete="off">
+                <input id="staff-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search name, username, position, email, or phone" autocomplete="off">
             </div>
         </div>
         <div class="entity-toolbar-actions">
@@ -91,7 +83,7 @@
                                 <span class="person-avatar">{{ person.first_name|default:person.username|first|upper }}</span>
                                 <div>
                                     <strong>{{ person.get_full_name|default:"Not provided" }}</strong>
-                                    <div class="complaint-row-meta">{{ person.staff_profile.department|default:"No department set" }}</div>
+                                    <div class="complaint-row-meta">{{ person.staff_profile.position|default:"No position set" }}</div>
                                 </div>
                             </div>
                         </td>

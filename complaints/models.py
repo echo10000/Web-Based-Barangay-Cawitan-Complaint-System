@@ -15,7 +15,6 @@ class ComplaintCategory(models.Model):
         default="NORMAL",
     )
     target_resolution_hours = models.PositiveIntegerField(default=72)
-    responsible_department = models.CharField(max_length=100, blank=True)
     color = models.CharField(max_length=20, blank=True, help_text="Optional dashboard color such as #2563eb.")
     is_active = models.BooleanField(default=True)
 

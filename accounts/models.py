@@ -81,7 +81,6 @@ class ResidentProfile(models.Model):
 class StaffProfile(models.Model):
     class Availability(models.TextChoices):
         AVAILABLE = "AVAILABLE", "Available"
-        BUSY = "BUSY", "Busy"
         UNAVAILABLE = "UNAVAILABLE", "Unavailable"
 
     DEFAULT_RESPONSIBILITIES = "\n".join(
@@ -99,7 +98,6 @@ class StaffProfile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="staff_profile")
     position = models.CharField(max_length=100, blank=True)
-    department = models.CharField(max_length=100, blank=True)
     availability = models.CharField(max_length=20, choices=Availability.choices, default=Availability.AVAILABLE)
     specialization_categories = models.ManyToManyField(
         "complaints.ComplaintCategory",

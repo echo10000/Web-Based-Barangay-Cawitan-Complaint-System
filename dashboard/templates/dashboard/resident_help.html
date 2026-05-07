@@ -32,10 +32,10 @@
             <strong>Email Barangay</strong>
             <small>barangay@cawitan.gov.ph</small>
         </a>
-        <a class="help-action-card" href="https://www.google.com/maps/search/?api=1&query=Barangay%20Cawitan%20Hall%20Kabankalan%20City" target="_blank" rel="noopener">
+        <a class="help-action-card" href="https://www.google.com/maps/search/?api=1&query=Barangay%20Cawitan%2C%20Santa%20Catalina%20City%2C%20Negros%20Oriental" target="_blank" rel="noopener">
             <span class="help-action-icon"><i class="bi bi-geo-alt-fill"></i></span>
             <strong>Get Directions</strong>
-            <small>Barangay Cawitan Hall</small>
+            <small>Barangay Cawitan, Santa Catalina City</small>
         </a>
         <div class="help-action-card help-action-card--status">
             <span class="help-action-icon"><i class="bi bi-clock-fill"></i></span>
@@ -70,9 +70,6 @@
                             <p>{{ category.description|default:"Use this category when your concern fits this area." }}</p>
                             <div class="help-category-meta">
                                 <span><i class="bi bi-hourglass-split me-1"></i>{{ category.target_resolution_hours }}h target</span>
-                                {% if category.responsible_department %}
-                                    <span><i class="bi bi-building-fill me-1"></i>{{ category.responsible_department }}</span>
-                                {% endif %}
                             </div>
                         </div>
                     {% endfor %}
@@ -132,7 +129,7 @@
                         <span class="help-contact-icon-wrap"><i class="bi bi-geo-alt-fill"></i></span>
                         <div>
                             <div class="help-contact-label">Address</div>
-                            <div class="help-contact-value">Barangay Cawitan Hall, Kabankalan City, Negros Occidental</div>
+                            <div class="help-contact-value">Barangay Cawitan, Santa Catalina City, Negros Oriental</div>
                         </div>
                     </li>
                     <li class="help-contact-item">

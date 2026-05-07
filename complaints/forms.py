@@ -106,10 +106,10 @@ class StaffAssignmentChoiceField(forms.ModelChoiceField):
         try:
             profile = obj.staff_profile
             availability = profile.get_availability_display()
-            team = profile.department or profile.position or "No team"
+            team = profile.position or "No position"
         except Exception:
             availability = "No availability"
-            team = "No team"
+            team = "No position"
         return f"{obj.get_full_name() or obj.username} - {availability}, {workload} active, {overdue} overdue, {team}"
 
 
@@ -514,7 +514,6 @@ class ComplaintCategoryForm(forms.ModelForm):
             "description",
             "default_priority",
             "target_resolution_hours",
-            "responsible_department",
             "color",
             "is_active",
         ]
@@ -523,7 +522,6 @@ class ComplaintCategoryForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "default_priority": forms.Select(attrs={"class": "form-select"}),
             "target_resolution_hours": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
-            "responsible_department": forms.TextInput(attrs={"class": "form-control"}),
             "color": forms.TextInput(attrs={"class": "form-control", "placeholder": "#2563eb"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }

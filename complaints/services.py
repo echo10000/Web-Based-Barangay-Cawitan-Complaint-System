@@ -50,7 +50,7 @@ def get_staff_assignment_options(complaint, limit=8, include_unavailable=True):
             availability_label = profile.get_availability_display()
             specializations = list(profile.specialization_categories.all())
             specialization_match = bool(complaint.category and complaint.category in specializations)
-            team = profile.department or profile.position or "No team set"
+            team = profile.position or "No position set"
         except Exception:
             availability = ""
             availability_label = "No availability set"
@@ -62,8 +62,7 @@ def get_staff_assignment_options(complaint, limit=8, include_unavailable=True):
 
         availability_rank = {
             "AVAILABLE": 0,
-            "BUSY": 1,
-            "UNAVAILABLE": 2,
+            "UNAVAILABLE": 1,
         }.get(availability, 3)
         score = availability_rank * 100 + staff.active_workload * 10 + staff.overdue_workload
         if specialization_match:

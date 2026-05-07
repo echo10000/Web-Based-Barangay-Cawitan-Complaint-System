@@ -4,7 +4,7 @@
 <div class="page-header page-header-row">
     <div>
         <h1>Complaint Categories</h1>
-        <p>Manage complaint types, default priority, departments, and active options.</p>
+        <p>Manage complaint types, default priority, target timelines, and active options.</p>
     </div>
     <a class="btn btn-primary" href="{% url 'complaints:category_create' %}">
         <i class="bi bi-plus-circle-fill me-1"></i>Add Category
@@ -19,7 +19,6 @@
                     <th>Name</th>
                     <th>Priority</th>
                     <th>Target</th>
-                    <th>Department</th>
                     <th>Complaints</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -34,7 +33,6 @@
                         </td>
                         <td>{{ category.get_default_priority_display }}</td>
                         <td>{{ category.target_resolution_hours }} hours</td>
-                        <td>{{ category.responsible_department|default:"-" }}</td>
                         <td>{{ category.total_complaints }}</td>
                         <td>
                             {% if category.is_active %}
@@ -90,7 +88,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7">
+                        <td colspan="6">
                             <div class="entity-empty">
                                 <i class="bi bi-tags entity-empty-icon"></i>
                                 <p class="entity-empty-title">No categories yet.</p>

@@ -19,9 +19,9 @@ class ResidentProfileAdmin(admin.ModelAdmin):
 
 @admin.register(StaffProfile)
 class StaffProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "position", "department", "availability", "phone_number", "short_responsibilities", "created_at")
-    list_filter = ("availability", "department", "specialization_categories")
-    search_fields = ("user__username", "user__first_name", "user__last_name", "position", "department", "responsibilities")
+    list_display = ("user", "position", "availability", "phone_number", "short_responsibilities", "created_at")
+    list_filter = ("availability", "specialization_categories")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "position", "responsibilities")
     filter_horizontal = ("specialization_categories",)
 
     @admin.display(description="Staff functions")
