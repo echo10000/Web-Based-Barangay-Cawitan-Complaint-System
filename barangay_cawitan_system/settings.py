@@ -4,10 +4,15 @@ from django.contrib.messages import constants as messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def csv_config(name, default=""):
+    return [item.strip() for item in config(name, default=default).split(",") if item.strip()]
+
+
 SECRET_KEY = config("SECRET_KEY", default="dev-only-secret-key") or "dev-only-secret-key"
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
-CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="https://captive-cadmium-commute.ngrok-free.dev").split(",")
+ALLOWED_HOSTS = csv_config("ALLOWED_HOSTS", default="localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = csv_config("CSRF_TRUSTED_ORIGINS")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -90,6 +95,13 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=False, cast=bool)
+
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "dashboard:home"
 LOGOUT_REDIRECT_URL = "accounts:login"
@@ -101,6 +113,11 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("EMAIL_HOST_USER", default="")
+
+# Comma-separated YYYY-MM-DD:YYYY-MM-DD windows when targeted resident/data
+# exports should be restricted, for example:
+# PRIVACY_ELECTION_RESTRICTION_WINDOWS=2025-01-12:2025-06-11,2028-01-09:2028-06-07
+PRIVACY_ELECTION_RESTRICTION_WINDOWS = config("PRIVACY_ELECTION_RESTRICTION_WINDOWS", default="")
 
 MESSAGE_TAGS = {
     messages.ERROR: "danger",

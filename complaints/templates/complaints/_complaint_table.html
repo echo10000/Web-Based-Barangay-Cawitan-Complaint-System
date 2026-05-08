@@ -1,3 +1,4 @@
+{% load privacy_tags %}
 <div class="table-responsive complaint-table-wrap">
     <table class="table align-middle complaint-table entity-table">
         <thead>
@@ -37,7 +38,14 @@
                             <span class="text-muted">Not set</span>
                         {% endif %}
                     </td>
-                    <td data-label="Resident">{{ complaint.resident.get_full_name|default:complaint.resident.username }}</td>
+                    <td data-label="Resident">
+                        {% if user.is_resident %}
+                            {{ complaint.resident.get_full_name|default:complaint.resident.username }}
+                        {% else %}
+                            {{ complaint.resident.get_full_name|default:complaint.resident.username }}
+                            <div class="complaint-row-meta">{{ complaint.contact_number|mask_phone }}</div>
+                        {% endif %}
+                    </td>
                     <td data-label="Assigned Staff">{% if complaint.assigned_to %}{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
                     <td data-label="Date" class="text-muted">{{ complaint.created_at|date:"M d, Y" }}</td>
                     <td data-label="Actions" class="entity-table-actions">

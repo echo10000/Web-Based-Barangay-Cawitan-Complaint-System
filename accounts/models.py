@@ -26,6 +26,16 @@ class User(AbstractUser):
     def is_barangay_admin(self):
         return self.role == self.Role.ADMIN or self.is_superuser
 
+    @property
+    def is_privacy_officer(self):
+        if self.is_superuser:
+            return True
+        if self.role != self.Role.STAFF:
+            return False
+        position = getattr(getattr(self, "staff_profile", None), "position", "") or ""
+        normalized = position.lower()
+        return "data protection" in normalized or "privacy" in normalized or "dpo" in normalized
+
 
 class ResidentProfile(models.Model):
     class VerificationStatus(models.TextChoices):
@@ -74,8 +84,16 @@ class ResidentProfile(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def has_valid_id_submission(self):
+        return all([self.valid_id_type, self.valid_id_front_image, self.valid_id_back_image])
+
     def __str__(self):
         return self.user.get_full_name() or self.user.username
+
+    @property
+    def has_valid_id_submission(self):
+        return bool(self.valid_id_type and self.valid_id_front_image and self.valid_id_back_image)
 
 
 class StaffProfile(models.Model):
@@ -130,3 +148,44 @@ class PasswordResetOTP(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timedelta(minutes=10)
+
+
+class DataExportRequest(models.Model):
+    class ExportType(models.TextChoices):
+        COMPLAINT_XLSX = "COMPLAINT_XLSX", "Complaint report Excel"
+        COMPLAINT_PDF = "COMPLAINT_PDF", "Complaint report PDF"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending approval"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+        USED = "USED", "Used"
+
+    export_type = models.CharField(max_length=30, choices=ExportType.choices)
+    purpose = models.CharField(max_length=80)
+    reason = models.TextField()
+    filters = models.JSONField(default=dict, blank=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="data_export_requests",
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_data_export_requests",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    reviewer_notes = models.TextField(blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-requested_at"]
+
+    def __str__(self):
+        return f"{self.get_export_type_display()} request #{self.pk}"

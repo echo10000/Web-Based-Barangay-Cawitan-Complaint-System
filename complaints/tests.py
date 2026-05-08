@@ -1,11 +1,14 @@
 from unittest.mock import patch
+import tempfile
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory
 from django.test import TestCase
+from django.test import override_settings
 from django.urls import reverse
 
-from accounts.models import User
-from .models import ActivityLog, Complaint, ComplaintFeedback
+from accounts.models import DataExportRequest, User
+from .models import ActivityLog, Complaint, ComplaintFeedback, UploadedEvidence
 from .views import complaint_detail_view
 
 
@@ -202,3 +205,79 @@ class ComplaintFeedbackViewTests(TestCase):
         self.assertFalse(context["feedback_form"].is_bound)
         self.assertTrue(context["can_submit_feedback"])
         self.assertIsNone(context["existing_feedback"])
+
+
+class ComplaintPrivacyControlTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="admin",
+            password="password123",
+            role=User.Role.ADMIN,
+        )
+        self.resident = User.objects.create_user(
+            username="resident",
+            password="password123",
+            role=User.Role.RESIDENT,
+        )
+        self.other_resident = User.objects.create_user(
+            username="other-resident",
+            password="password123",
+            role=User.Role.RESIDENT,
+        )
+        self.complaint = Complaint.objects.create(
+            resident=self.resident,
+            title="Drainage issue",
+            description="Canal is clogged.",
+            incident_location="Purok 2",
+            privacy_consent=True,
+            accuracy_certification=True,
+            contact_permission=True,
+        )
+
+    def test_report_export_requires_approved_request(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("complaints:reports_export_xlsx"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("complaints:reports"))
+        self.assertFalse(ActivityLog.objects.filter(action=ActivityLog.Action.DATA_EXPORTED).exists())
+
+    def test_approved_export_request_must_match_filters(self):
+        export_request = DataExportRequest.objects.create(
+            export_type=DataExportRequest.ExportType.COMPLAINT_XLSX,
+            purpose="OFFICIAL_MONITORING",
+            reason="Official monitoring for monthly case status.",
+            filters={"status": Complaint.Status.PENDING},
+            requested_by=self.admin,
+            approved_by=User.objects.create_superuser(username="super", password="password123"),
+            status=DataExportRequest.Status.APPROVED,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(
+            reverse("complaints:reports_export_xlsx"),
+            {"status": Complaint.Status.RESOLVED, "export_request": export_request.pk},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("complaints:reports"))
+        export_request.refresh_from_db()
+        self.assertEqual(export_request.status, DataExportRequest.Status.APPROVED)
+
+    def test_unrelated_resident_cannot_open_evidence_file(self):
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            evidence = UploadedEvidence.objects.create(
+                complaint=self.complaint,
+                uploaded_by=self.resident,
+                file=SimpleUploadedFile("proof.txt", b"private evidence", content_type="text/plain"),
+            )
+            self.client.force_login(self.other_resident)
+
+            response = self.client.get(reverse("complaints:file", kwargs={"kind": "evidence", "pk": evidence.pk}))
+
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response["Location"], reverse("complaints:list"))
+            self.assertFalse(
+                ActivityLog.objects.filter(action=ActivityLog.Action.SENSITIVE_FILE_VIEWED, target_id=evidence.pk).exists()
+            )

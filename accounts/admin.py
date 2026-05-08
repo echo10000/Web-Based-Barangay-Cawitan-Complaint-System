@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import PasswordResetOTP, ResidentProfile, StaffProfile, User
+from .models import DataExportRequest, PasswordResetOTP, ResidentProfile, StaffProfile, User
 
 
 @admin.register(User)
@@ -35,3 +35,32 @@ class PasswordResetOTPAdmin(admin.ModelAdmin):
     list_filter = ("is_used", "created_at")
     search_fields = ("user__username", "user__email", "otp")
     readonly_fields = ("created_at",)
+
+
+@admin.register(DataExportRequest)
+class DataExportRequestAdmin(admin.ModelAdmin):
+    list_display = ("id", "export_type", "purpose", "status", "requested_by", "approved_by", "requested_at")
+    list_filter = ("export_type", "purpose", "status", "requested_at", "reviewed_at")
+    search_fields = ("reason", "requested_by__username", "approved_by__username")
+    readonly_fields = (
+        "export_type",
+        "purpose",
+        "reason",
+        "filters",
+        "requested_by",
+        "approved_by",
+        "status",
+        "reviewer_notes",
+        "requested_at",
+        "reviewed_at",
+        "used_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

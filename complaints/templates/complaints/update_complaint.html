@@ -87,7 +87,7 @@
                     </div>
                 </div>
                 <div class="assignment-advisor-list">
-                    {% for option in staff_assignment_options %}
+                    {% for option in staff_assignment_options|slice:":3" %}
                         <div class="assignment-advisor-item">
                             <div>
                                 <strong>{{ option.user.get_full_name|default:option.user.username }}</strong>

@@ -408,6 +408,13 @@ class ActivityLog(models.Model):
         FEEDBACK_SUBMITTED = "FEEDBACK_SUBMITTED", "Feedback Submitted"
         SLA_OVERDUE_FLAGGED = "SLA_OVERDUE_FLAGGED", "SLA Overdue Flagged"
         NOTICE_GENERATED = "NOTICE_GENERATED", "Notice Generated"
+        RESIDENT_DIRECTORY_VIEWED = "RESIDENT_DIRECTORY_VIEWED", "Resident Directory Viewed"
+        RESIDENT_PROFILE_VIEWED = "RESIDENT_PROFILE_VIEWED", "Resident Profile Viewed"
+        DATA_EXPORT_REQUESTED = "DATA_EXPORT_REQUESTED", "Data Export Requested"
+        DATA_EXPORT_APPROVED = "DATA_EXPORT_APPROVED", "Data Export Approved"
+        DATA_EXPORT_REJECTED = "DATA_EXPORT_REJECTED", "Data Export Rejected"
+        DATA_EXPORTED = "DATA_EXPORTED", "Data Exported"
+        SENSITIVE_FILE_VIEWED = "SENSITIVE_FILE_VIEWED", "Sensitive File Viewed"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

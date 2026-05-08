@@ -57,10 +57,36 @@ class ResidentRegistrationForm(UserCreationForm):
     address = forms.CharField(widget=forms.TextInput(attrs={"class": "form-control"}))
     purok = forms.ChoiceField(choices=PUROK_CHOICES, required=False, widget=forms.Select(attrs={"class": "form-select"}))
     birth_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
+    valid_id_type = forms.ChoiceField(
+        choices=[("", "Select ID type")] + list(ResidentProfile.ValidIDType.choices),
+        label="Type of valid ID",
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text="Choose the ID shown in the images you will submit.",
+    )
+    valid_id_front_image = forms.ImageField(
+        label="Valid ID front image",
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+        help_text="Upload the front side of your valid ID.",
+    )
+    valid_id_back_image = forms.ImageField(
+        label="Valid ID back image",
+        widget=forms.ClearableFileInput(attrs={"class": "form-control"}),
+        help_text="Upload the back side of your valid ID.",
+    )
 
     class Meta:
         model = User
-        fields = ["username", "first_name", "last_name", "email", "password1", "password2"]
+        fields = [
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "password1",
+            "password2",
+            "valid_id_type",
+            "valid_id_front_image",
+            "valid_id_back_image",
+        ]
         widgets = {"username": forms.TextInput(attrs={"class": "form-control"})}
 
     def __init__(self, *args, **kwargs):
@@ -80,6 +106,10 @@ class ResidentRegistrationForm(UserCreationForm):
                 purok=self.cleaned_data.get("purok", ""),
                 household_number="",
                 birth_date=self.cleaned_data.get("birth_date"),
+                valid_id_type=self.cleaned_data["valid_id_type"],
+                valid_id_front_image=self.cleaned_data["valid_id_front_image"],
+                valid_id_back_image=self.cleaned_data["valid_id_back_image"],
+                verification_status=ResidentProfile.VerificationStatus.PENDING,
             )
         return user
 
@@ -181,6 +211,17 @@ class ResidentVerificationForm(forms.ModelForm):
             "verification_status": forms.Select(attrs={"class": "form-select"}),
             "verification_notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("verification_status") == ResidentProfile.VerificationStatus.VERIFIED
+            and not self.instance.has_valid_id_submission
+        ):
+            raise forms.ValidationError(
+                "Resident cannot be verified until a valid ID type and front/back images are submitted."
+            )
+        return cleaned_data
 
 
 class StaffProfileForm(forms.ModelForm):

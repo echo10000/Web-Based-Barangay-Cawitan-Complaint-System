@@ -86,7 +86,26 @@ class ActivityLogAdmin(admin.ModelAdmin):
     list_display = ("created_at", "action", "actor", "complaint", "summary")
     list_filter = ("action", "created_at")
     search_fields = ("summary", "actor__username", "complaint__title", "target_repr")
-    readonly_fields = ("created_at",)
+    readonly_fields = (
+        "actor",
+        "complaint",
+        "action",
+        "target_type",
+        "target_id",
+        "target_repr",
+        "summary",
+        "metadata",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Notification)

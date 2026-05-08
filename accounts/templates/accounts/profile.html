@@ -108,8 +108,8 @@
                             <div class="resident-id-preview-card">
                                 <span class="verification-id-label">Front side</span>
                                 {% if profile_form.instance.valid_id_front_image %}
-                                    <a href="{{ profile_form.instance.valid_id_front_image.url }}" target="_blank" rel="noopener">
-                                        <img src="{{ profile_form.instance.valid_id_front_image.url }}" alt="Uploaded valid ID front side">
+                                    <a href="{% url 'accounts:resident_id_file' user.pk 'front' %}" target="_blank" rel="noopener">
+                                        <img src="{% url 'accounts:resident_id_file' user.pk 'front' %}" alt="Uploaded valid ID front side">
                                     </a>
                                 {% else %}
                                     <div class="resident-id-preview-empty">No front image uploaded.</div>
@@ -118,8 +118,8 @@
                             <div class="resident-id-preview-card">
                                 <span class="verification-id-label">Back side</span>
                                 {% if profile_form.instance.valid_id_back_image %}
-                                    <a href="{{ profile_form.instance.valid_id_back_image.url }}" target="_blank" rel="noopener">
-                                        <img src="{{ profile_form.instance.valid_id_back_image.url }}" alt="Uploaded valid ID back side">
+                                    <a href="{% url 'accounts:resident_id_file' user.pk 'back' %}" target="_blank" rel="noopener">
+                                        <img src="{% url 'accounts:resident_id_file' user.pk 'back' %}" alt="Uploaded valid ID back side">
                                     </a>
                                 {% else %}
                                     <div class="resident-id-preview-empty">No back image uploaded.</div>

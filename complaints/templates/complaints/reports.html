@@ -18,17 +18,85 @@
         <h1>Reports</h1>
         <p>Complaint summaries, workload visibility, and print-ready monitoring.</p>
     </div>
-    <div class="d-flex gap-2">
-        <a class="btn btn-outline-primary" href="{% url 'complaints:reports_export_xlsx' %}?{{ query_string }}">
-            <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i>Export Excel
-        </a>
-        <a class="btn btn-outline-primary" href="{% url 'complaints:reports_export_pdf' %}?{{ query_string }}">
-            <i class="bi bi-file-earmark-pdf-fill me-1"></i>Export PDF
-        </a>
-        <button class="btn btn-primary" onclick="window.print()">
-            <i class="bi bi-printer-fill me-1"></i>Print Report
-        </button>
+</div>
+
+<div class="content-card entity-toolbar-card mb-3">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Controlled Exports</p>
+            <p class="entity-card-subtitle">Excel and PDF downloads require a specific official reason and independent approval.</p>
+        </div>
     </div>
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <form method="post" action="{% url 'complaints:request_report_export' 'COMPLAINT_XLSX' %}?{{ query_string }}" class="d-grid gap-2">
+                {% csrf_token %}
+                <label class="form-label" for="xlsx-purpose">Excel purpose</label>
+                <select id="xlsx-purpose" class="form-select" name="export_purpose" required>
+                    <option value="">Choose purpose</option>
+                    {% for value,label in export_purpose_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+                <textarea class="form-control" name="export_reason" rows="2" minlength="15" required placeholder="Specific official reason"></textarea>
+                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-file-earmark-spreadsheet-fill me-1"></i>Request Excel Export</button>
+            </form>
+        </div>
+        <div class="col-lg-6">
+            <form method="post" action="{% url 'complaints:request_report_export' 'COMPLAINT_PDF' %}?{{ query_string }}" class="d-grid gap-2">
+                {% csrf_token %}
+                <label class="form-label" for="pdf-purpose">PDF purpose</label>
+                <select id="pdf-purpose" class="form-select" name="export_purpose" required>
+                    <option value="">Choose purpose</option>
+                    {% for value,label in export_purpose_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+                <textarea class="form-control" name="export_reason" rows="2" minlength="15" required placeholder="Specific official reason"></textarea>
+                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-file-earmark-pdf-fill me-1"></i>Request PDF Export</button>
+            </form>
+        </div>
+    </div>
+    <div class="table-responsive mt-3">
+        <table class="table align-middle entity-table">
+            <thead><tr><th>Request</th><th>Purpose</th><th>Status</th><th>Download</th></tr></thead>
+            <tbody>
+                {% for export_request in export_requests %}
+                    <tr>
+                        <td>EXP-{{ export_request.pk|stringformat:"05d" }}<div class="complaint-row-meta">{{ export_request.get_export_type_display }}</div></td>
+                        <td>{{ export_request.reason }}</td>
+                        <td><span class="badge bg-secondary">{{ export_request.get_status_display }}</span></td>
+                        <td>
+                            {% if export_request.status == "APPROVED" %}
+                                {% if export_request.export_type == "COMPLAINT_XLSX" %}
+                                    <a class="btn btn-sm btn-success" href="{% url 'complaints:reports_export_xlsx' %}?{{ export_request.download_querystring }}">Download</a>
+                                {% else %}
+                                    <a class="btn btn-sm btn-success" href="{% url 'complaints:reports_export_pdf' %}?{{ export_request.download_querystring }}">Download</a>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Not available</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-muted">No export requests yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if can_review_exports %}
+        <div class="mt-3">
+            <p class="entity-card-title">Pending Privacy Review</p>
+            {% for export_request in pending_export_reviews %}
+                <form method="post" class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    {% csrf_token %}
+                    <span class="entity-chip">EXP-{{ export_request.pk|stringformat:"05d" }}</span>
+                    <span>{{ export_request.requested_by.get_full_name|default:export_request.requested_by.username }} - {{ export_request.get_export_type_display }}</span>
+                    <input class="form-control" style="max-width: 260px;" name="reviewer_notes" placeholder="Reviewer notes">
+                    <button class="btn btn-sm btn-success" formaction="{% url 'complaints:review_report_export' export_request.pk 'approve' %}" type="submit">Approve</button>
+                    <button class="btn btn-sm btn-outline-danger" formaction="{% url 'complaints:review_report_export' export_request.pk 'reject' %}" type="submit">Reject</button>
+                </form>
+            {% empty %}
+                <p class="text-muted">No pending export requests.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
 
 <div class="content-card entity-toolbar-card mb-3">

@@ -16,6 +16,7 @@ urlpatterns = [
     path("<int:pk>/toggle-status/", views.toggle_account_status_view, name="toggle_account_status"),
     path("<int:pk>/reset-password/", views.reset_account_password_view, name="reset_account_password"),
     path("<int:pk>/verify-resident/", views.verify_resident_view, name="verify_resident"),
+    path("<int:pk>/resident-id/<str:side>/", views.resident_id_file_view, name="resident_id_file"),
     path("staff/create/", views.create_staff_view, name="create_staff"),
     path("residents/", views.resident_management_view, name="residents"),
     path("staff/", views.staff_management_view, name="staff"),

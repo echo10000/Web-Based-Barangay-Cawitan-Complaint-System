@@ -1,5 +1,7 @@
 from datetime import datetime
 from io import BytesIO
+import mimetypes
+from urllib.parse import urlencode
 from xml.sax.saxutils import escape
 
 from django.contrib import messages
@@ -7,12 +9,19 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from accounts.models import User
+from accounts.models import DataExportRequest, User
+from accounts.privacy import (
+    EXPORT_PURPOSES,
+    can_review_export,
+    create_export_request,
+    mark_export_used,
+    require_approved_export_request,
+)
 from .forms import (
     ComplaintFeeForm,
     ComplaintFeedbackForm,
@@ -125,6 +134,27 @@ def admin_required(view_func):
         if request.user.is_authenticated and request.user.is_barangay_admin:
             return view_func(request, *args, **kwargs)
         messages.error(request, "Only admins can access that page.")
+        return redirect("dashboard:home")
+
+    return wrapper
+
+
+def can_view_complaint(user, complaint):
+    return (
+        user.is_barangay_admin
+        or complaint.resident == user
+        or (
+            user.is_staff_member
+            and (complaint.assigned_to == user or complaint.assigned_to is None)
+        )
+    )
+
+
+def privacy_officer_required(view_func):
+    def wrapper(request, *args, **kwargs):
+        if request.user.is_authenticated and request.user.is_privacy_officer:
+            return view_func(request, *args, **kwargs)
+        messages.error(request, "Only the data protection or privacy officer can access that page.")
         return redirect("dashboard:home")
 
     return wrapper
@@ -428,15 +458,7 @@ def complaint_detail_view(request, pk):
         ),
         pk=pk,
     )
-    can_view = (
-        request.user.is_barangay_admin
-        or complaint.resident == request.user
-        or (
-            request.user.is_staff_member
-            and (complaint.assigned_to == request.user or complaint.assigned_to is None)
-        )
-    )
-    if not can_view:
+    if not can_view_complaint(request.user, complaint):
         messages.error(request, "You do not have permission to view this complaint.")
         return redirect("complaints:list")
 
@@ -823,6 +845,43 @@ def complaint_notice_pdf_view(request, pk, notice_type):
     )
     response = build_notice_pdf_response(request, complaint, title, lines, f"complaint-{complaint.pk}-{notice_type}.pdf")
     return response or redirect(complaint.get_absolute_url())
+
+
+@login_required
+def complaint_file_view(request, kind, pk):
+    if kind == "evidence":
+        file_obj = get_object_or_404(UploadedEvidence.objects.select_related("complaint"), pk=pk)
+        complaint = file_obj.complaint
+        file_field = file_obj.file
+    elif kind == "respondent-evidence":
+        file_obj = get_object_or_404(RespondentEvidence.objects.select_related("complaint"), pk=pk)
+        complaint = file_obj.complaint
+        file_field = file_obj.file
+        if not (request.user.is_staff_member or request.user.is_barangay_admin):
+            messages.error(request, "You do not have permission to view that file.")
+            return redirect("complaints:list")
+    elif kind == "reply":
+        file_obj = get_object_or_404(ComplaintReply.objects.select_related("complaint"), pk=pk)
+        complaint = file_obj.complaint
+        file_field = file_obj.attachment
+    else:
+        raise Http404("File type was not found.")
+
+    if not can_view_complaint(request.user, complaint):
+        messages.error(request, "You do not have permission to view that file.")
+        return redirect("complaints:list")
+    if not file_field:
+        raise Http404("File was not found.")
+    log_activity(
+        actor=request.user,
+        complaint=complaint,
+        action=ActivityLog.Action.SENSITIVE_FILE_VIEWED,
+        target=file_obj,
+        summary=f"Sensitive file viewed for complaint '{complaint.title}'.",
+        metadata={"kind": kind},
+    )
+    content_type, _ = mimetypes.guess_type(file_field.name)
+    return FileResponse(file_field.open("rb"), content_type=content_type or "application/octet-stream")
 
 
 def get_workflow_guidance(complaint, action=None):
@@ -1644,6 +1703,74 @@ def build_report_pdf_seal(size=112):
 
 @login_required
 @admin_required
+def request_report_export_view(request, export_type):
+    if request.method != "POST":
+        return redirect("complaints:reports")
+    valid_types = {choice[0] for choice in DataExportRequest.ExportType.choices}
+    if export_type not in valid_types:
+        messages.error(request, "Unknown export type.")
+        return redirect("complaints:reports")
+    export_request = create_export_request(request, export_type)
+    if export_request:
+        messages.success(
+            request,
+            "Export request submitted. A privacy officer or superuser who did not request it must approve it before download.",
+        )
+    return redirect(request.META.get("HTTP_REFERER") or "complaints:reports")
+
+
+@login_required
+@privacy_officer_required
+def export_review_queue_view(request):
+    pending_export_reviews = DataExportRequest.objects.filter(status=DataExportRequest.Status.PENDING)
+    recent_export_reviews = DataExportRequest.objects.exclude(status=DataExportRequest.Status.PENDING)[:12]
+    return render(
+        request,
+        "complaints/export_reviews.html",
+        {
+            "pending_export_reviews": pending_export_reviews,
+            "recent_export_reviews": recent_export_reviews,
+        },
+    )
+
+
+@login_required
+def review_report_export_view(request, pk, decision):
+    if request.method != "POST":
+        return redirect("complaints:export_reviews")
+    export_request = get_object_or_404(DataExportRequest, pk=pk, status=DataExportRequest.Status.PENDING)
+    if not can_review_export(request.user, export_request):
+        messages.error(request, "Only an independent privacy officer or superuser can review this export request.")
+        return redirect("complaints:export_reviews" if request.user.is_privacy_officer else "dashboard:home")
+    notes = request.POST.get("reviewer_notes", "").strip()
+    if decision == "approve":
+        export_request.status = DataExportRequest.Status.APPROVED
+        action = ActivityLog.Action.DATA_EXPORT_APPROVED
+        message = "Export request approved."
+    elif decision == "reject":
+        export_request.status = DataExportRequest.Status.REJECTED
+        action = ActivityLog.Action.DATA_EXPORT_REJECTED
+        message = "Export request rejected."
+    else:
+        messages.error(request, "Unknown review decision.")
+        return redirect("complaints:reports")
+    export_request.approved_by = request.user
+    export_request.reviewer_notes = notes
+    export_request.reviewed_at = timezone.now()
+    export_request.save(update_fields=["status", "approved_by", "reviewer_notes", "reviewed_at"])
+    log_activity(
+        actor=request.user,
+        action=action,
+        target=export_request,
+        summary=f"{export_request.get_export_type_display()} {export_request.get_status_display().lower()}.",
+        metadata={"reviewer_notes": notes[:200]},
+    )
+    messages.success(request, message)
+    return redirect("complaints:export_reviews" if request.user.is_privacy_officer and not request.user.is_barangay_admin else "complaints:reports")
+
+
+@login_required
+@admin_required
 def reports_view(request):
     complaints, date_from, date_to = get_report_complaints(request)
 
@@ -1693,6 +1820,12 @@ def reports_view(request):
         average_rating=Avg("rating"),
     )
     accepted_feedback_count = ComplaintFeedback.objects.filter(complaint__in=complaints, resolution_accepted=True).count()
+    export_requests = list(DataExportRequest.objects.filter(requested_by=request.user)[:8])
+    for export_request in export_requests:
+        export_request.download_querystring = urlencode(
+            {**export_request.filters, "export_request": export_request.pk}
+        )
+    pending_export_reviews = DataExportRequest.objects.filter(status=DataExportRequest.Status.PENDING)[:8]
     return render(
         request,
         "complaints/reports.html",
@@ -1731,6 +1864,10 @@ def reports_view(request):
             "accepted_feedback_count": accepted_feedback_count,
             "generated_at": timezone.localtime(timezone.now()),
             "generated_by": request.user.get_full_name() or request.user.username,
+            "export_purpose_choices": EXPORT_PURPOSES.items(),
+            "export_requests": export_requests,
+            "pending_export_reviews": pending_export_reviews,
+            "can_review_exports": request.user.is_privacy_officer,
         },
     )
 
@@ -1738,6 +1875,9 @@ def reports_view(request):
 @login_required
 @admin_required
 def reports_export_xlsx_view(request):
+    export_request = require_approved_export_request(request, DataExportRequest.ExportType.COMPLAINT_XLSX)
+    if not export_request:
+        return redirect("complaints:reports")
     complaints, _, _ = get_report_complaints(request)
     try:
         from openpyxl import Workbook
@@ -1748,6 +1888,7 @@ def reports_export_xlsx_view(request):
 
     generated_at = timezone.localtime(timezone.now()).strftime("%B %d, %Y %I:%M %p")
     generated_by = request.user.get_full_name() or request.user.username
+    export_stamp = f"Export ID: EXP-{export_request.pk:05d} | Purpose: {export_request.get_purpose_display() if hasattr(export_request, 'get_purpose_display') else export_request.purpose}"
     total = complaints.count()
     resolved = complaints.filter(status=Complaint.Status.RESOLVED).count()
     overdue = sum(1 for complaint in complaints if complaint.is_overdue)
@@ -1776,6 +1917,7 @@ def reports_export_xlsx_view(request):
         (BARANGAY_OFFICE_NAME, 2, 12, False),
         (f"Generated At: {generated_at}", 3, 11, False),
         (f"Generated By: {generated_by}", 4, 11, False),
+        (export_stamp, 5, 10, False),
     ]
     for value, row, size, bold in merged_header_rows:
         sheet.merge_cells(start_row=row, start_column=1, end_row=row, end_column=15)
@@ -1790,7 +1932,7 @@ def reports_export_xlsx_view(request):
         ("Resolved", resolved),
         ("Overdue", overdue),
     ]
-    for index, (label, value) in enumerate(summary_rows, start=6):
+    for index, (label, value) in enumerate(summary_rows, start=7):
         sheet.cell(row=index, column=1, value=label)
         sheet.cell(row=index, column=2, value=value)
         for column in range(1, 3):
@@ -1816,7 +1958,7 @@ def reports_export_xlsx_view(request):
         "Resolved Time",
         "SLA Status",
     ]
-    header_row = 10
+    header_row = 11
     for column, label in enumerate(headers, start=1):
         cell = sheet.cell(row=header_row, column=column, value=label)
         cell.fill = header_fill
@@ -1877,7 +2019,7 @@ def reports_export_xlsx_view(request):
 
     footer_row = header_row + total + 2
     sheet.merge_cells(start_row=footer_row, start_column=1, end_row=footer_row, end_column=15)
-    footer_cell = sheet.cell(row=footer_row, column=1, value=BARANGAY_DOCUMENT_FOOTER)
+    footer_cell = sheet.cell(row=footer_row, column=1, value=f"{BARANGAY_DOCUMENT_FOOTER} {export_stamp}.")
     footer_cell.font = Font(italic=True, color="475569")
     footer_cell.alignment = Alignment(horizontal="center", vertical="center")
     footer_cell.fill = PatternFill("solid", fgColor="EAF1F8")
@@ -1907,12 +2049,16 @@ def reports_export_xlsx_view(request):
     )
     response["Content-Disposition"] = 'attachment; filename="barangay-cawitan-official-complaints-report.xlsx"'
     workbook.save(response)
+    mark_export_used(request, export_request)
     return response
 
 
 @login_required
 @admin_required
 def reports_export_pdf_view(request):
+    export_request = require_approved_export_request(request, DataExportRequest.ExportType.COMPLAINT_PDF)
+    if not export_request:
+        return redirect("complaints:reports")
     complaints, _, _ = get_report_complaints(request)
     try:
         from reportlab.lib import colors
@@ -2008,6 +2154,7 @@ def reports_export_pdf_view(request):
     generated_by = request.user.get_full_name() or request.user.username
     generated_at = timezone.localtime(timezone.now())
     generated_at_label = generated_at.strftime("%B %d, %Y %I:%M %p")
+    export_label = f"EXP-{export_request.pk:05d} | {export_request.purpose}"
     filters = get_report_filter_summary(request)
     total = len(overview_complaints)
     resolved = sum(1 for complaint in overview_complaints if complaint.status == Complaint.Status.RESOLVED)
@@ -2048,6 +2195,8 @@ def reports_export_pdf_view(request):
     story.append(Table([[[Paragraph("OFFICIAL COMPLAINT MONITORING REPORT", report_title_style), Spacer(1, 1.5 * mm), Paragraph("Barangay Cawitan Complaint Summary and Case Register", report_subtitle_style)]]], colWidths=[document.width], style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F4F6")), ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 9), ("BOTTOMPADDING", (0, 0), (-1, -1), 9)])))
     story.append(Spacer(1, 4 * mm))
     story.append(Table([[Paragraph(f"<b>Generated:</b> {escape(generated_at_label)}", meta_style_left), Paragraph(f"<b>Generated by:</b> {escape(generated_by)}", meta_style_right)]], colWidths=[document.width / 2.0, document.width / 2.0], style=TableStyle([("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)])))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(f"<b>Export:</b> {escape(export_label)}", meta_style_left))
     story.append(Spacer(1, 3 * mm))
     story.append(Table([[Paragraph(f"<b>Total:</b> {total}", meta_style_left), Paragraph(f"<b>Resolved:</b> {resolved}", meta_style_left), Paragraph(f"<b>Overdue:</b> {overdue}", meta_style_left), Paragraph(f"<b>Filters:</b> {escape(filter_text)}", meta_style_left)]], colWidths=[22 * mm, 24 * mm, 23 * mm, document.width - 69 * mm], style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#EFF6FF")), ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#BFDBFE")), ("LINEBEFORE", (1, 0), (-1, 0), 0.6, colors.HexColor("#BFDBFE")), ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5), ("VALIGN", (0, 0), (-1, -1), "MIDDLE")])))
     story.append(Spacer(1, 4 * mm))
@@ -2115,10 +2264,11 @@ def reports_export_pdf_view(request):
             if index != len(overview_complaints) - 1:
                 story.append(Spacer(1, 4 * mm))
 
-    document.build(story, canvasmaker=lambda *args, **kwargs: NumberedReportCanvas(*args, generated_label=generated_at.strftime("%b %d, %Y"), **kwargs))
+    document.build(story, canvasmaker=lambda *args, **kwargs: NumberedReportCanvas(*args, generated_label=f"{generated_at.strftime('%b %d, %Y')} | EXP-{export_request.pk:05d}", **kwargs))
     buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = 'attachment; filename="barangay-cawitan-official-complaints-report.pdf"'
+    mark_export_used(request, export_request)
     return response
 
 

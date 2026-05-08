@@ -1,4 +1,5 @@
 import random
+import mimetypes
 
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
@@ -10,6 +11,7 @@ from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.conf import settings
 from django.utils import timezone
@@ -28,6 +30,13 @@ from .forms import (
     UserProfileForm,
 )
 from .models import PasswordResetOTP, ResidentProfile, StaffProfile, User
+from .privacy import (
+    ACCESS_PURPOSES,
+    log_resident_directory_access,
+    log_resident_profile_access,
+    require_resident_access_purpose,
+    resident_purpose_redirect_url,
+)
 from complaints.models import ActivityLog, Complaint, ComplaintCategory
 from complaints.services import log_activity
 
@@ -113,11 +122,11 @@ def logout_view(request):
 def register_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard:home")
-    form = ResidentRegistrationForm(request.POST or None)
+    form = ResidentRegistrationForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user)
-        messages.success(request, "Registration successful. Welcome to the complaint portal.")
+        messages.success(request, "Registration successful. Your valid ID is pending admin review.")
         return redirect("dashboard:resident")
     return render(request, "accounts/register.html", {"form": form})
 
@@ -361,6 +370,13 @@ def create_staff_view(request):
 @admin_required
 def edit_account_view(request, pk):
     account = _admin_managed_account_or_404(pk)
+    purpose = ""
+    if account.role == User.Role.RESIDENT:
+        purpose = require_resident_access_purpose(request)
+        if not purpose:
+            return redirect("accounts:residents")
+        if request.method == "GET":
+            log_resident_profile_access(request, account, purpose)
     user_form = AdminAccountForm(request.POST or None, instance=account)
     if account.role == User.Role.RESIDENT:
         profile, _ = ResidentProfile.objects.get_or_create(user=account, defaults={"address": ""})
@@ -399,6 +415,8 @@ def edit_account_view(request, pk):
             summary=f"{account_type} account updated for {account.username}.",
         )
         messages.success(request, f"{account_type} account updated successfully.")
+        if account.role == User.Role.RESIDENT:
+            return redirect(resident_purpose_redirect_url("/accounts/residents/", purpose))
         return redirect(_account_list_url(account))
 
     return render(
@@ -410,6 +428,7 @@ def edit_account_view(request, pk):
             "user_form": user_form,
             "profile_form": profile_form,
             "verification_form": verification_form,
+            "access_purpose": purpose,
         },
     )
 
@@ -420,6 +439,7 @@ def toggle_account_status_view(request, pk):
     if request.method != "POST":
         return redirect("dashboard:home")
     account = _admin_managed_account_or_404(pk)
+    purpose = request.POST.get("purpose", "")
     account.is_active = not account.is_active
     account.save(update_fields=["is_active"])
     log_activity(
@@ -431,6 +451,8 @@ def toggle_account_status_view(request, pk):
     )
     state = "activated" if account.is_active else "deactivated"
     messages.success(request, f"{account.get_full_name() or account.username} has been {state}.")
+    if account.role == User.Role.RESIDENT and purpose:
+        return redirect(resident_purpose_redirect_url("/accounts/residents/", purpose))
     return redirect(_account_list_url(account))
 
 
@@ -440,8 +462,11 @@ def reset_account_password_view(request, pk):
     if request.method != "POST":
         return redirect("dashboard:home")
     account = _admin_managed_account_or_404(pk)
+    purpose = request.POST.get("purpose", "")
     if not account.email:
         messages.error(request, "This account has no email address for password reset.")
+        if account.role == User.Role.RESIDENT and purpose:
+            return redirect(resident_purpose_redirect_url("/accounts/residents/", purpose))
         return redirect(_account_list_url(account))
     temporary_password = get_random_string(12)
     account.set_password(temporary_password)
@@ -470,6 +495,8 @@ def reset_account_password_view(request, pk):
         messages.error(request, "Password was reset, but the temporary password email could not be sent.")
     else:
         messages.success(request, f"Temporary password sent to {account.email}.")
+    if account.role == User.Role.RESIDENT and purpose:
+        return redirect(resident_purpose_redirect_url("/accounts/residents/", purpose))
     return redirect(_account_list_url(account))
 
 
@@ -478,8 +505,14 @@ def reset_account_password_view(request, pk):
 def verify_resident_view(request, pk):
     if request.method != "POST":
         return redirect("accounts:residents")
+    purpose = require_resident_access_purpose(request)
+    if not purpose:
+        return redirect("accounts:residents")
     account = get_object_or_404(User, pk=pk, role=User.Role.RESIDENT)
     profile, _ = ResidentProfile.objects.get_or_create(user=account, defaults={"address": ""})
+    if not profile.has_valid_id_submission:
+        messages.error(request, "Resident cannot be verified until they submit a valid ID type and front/back images.")
+        return redirect(resident_purpose_redirect_url("/accounts/residents/", purpose))
     profile.verification_status = ResidentProfile.VerificationStatus.VERIFIED
     profile.verified_at = timezone.now()
     profile.verified_by = request.user
@@ -491,12 +524,25 @@ def verify_resident_view(request, pk):
         summary=f"Resident {account.username} verified.",
     )
     messages.success(request, f"{account.get_full_name() or account.username} has been verified.")
-    return redirect("accounts:residents")
+    return redirect(resident_purpose_redirect_url("/accounts/residents/", purpose))
 
 
 @login_required
 @admin_required
 def resident_management_view(request):
+    purpose = require_resident_access_purpose(request)
+    if not purpose:
+        return render(
+            request,
+            "accounts/resident_management.html",
+            {
+                "purpose_required": True,
+                "access_purposes": ACCESS_PURPOSES.items(),
+                "residents": [],
+                "total_residents": User.objects.filter(role=User.Role.RESIDENT).count(),
+                "filtered_count": 0,
+            },
+        )
     residents = User.objects.filter(role=User.Role.RESIDENT).select_related("resident_profile").order_by("last_name")
     search = request.GET.get("q", "").strip()
     verification_status = request.GET.get("verification_status", "")
@@ -563,6 +609,7 @@ def resident_management_view(request):
             | Q(resident_profile__valid_id_back_image__isnull=True)
         )
     filtered_count = residents.count()
+    log_resident_directory_access(request, purpose, filtered_count=filtered_count, search=search)
     page_obj, pagination_querystring, pagination_range = paginate_queryset(request, residents)
     return render(
         request,
@@ -584,6 +631,9 @@ def resident_management_view(request):
             "selected_verification_status": verification_status,
             "selected_profile_state": profile_state,
             "selected_id_status": id_status,
+            "access_purpose": purpose,
+            "access_purpose_label": ACCESS_PURPOSES[purpose],
+            "access_purposes": ACCESS_PURPOSES.items(),
         },
     )
 
@@ -620,3 +670,31 @@ def staff_management_view(request):
             "available_staff": available_staff,
         },
     )
+
+
+@login_required
+def resident_id_file_view(request, pk, side):
+    account = get_object_or_404(User, pk=pk, role=User.Role.RESIDENT)
+    if account == request.user:
+        purpose = "SELF_SERVICE"
+    elif request.user.is_barangay_admin:
+        purpose = require_resident_access_purpose(request)
+        if not purpose:
+            return redirect("accounts:residents")
+    else:
+        messages.error(request, "You do not have permission to view that file.")
+        return redirect("dashboard:home")
+
+    profile = get_object_or_404(ResidentProfile, user=account)
+    file_field = profile.valid_id_front_image if side == "front" else profile.valid_id_back_image
+    if not file_field:
+        raise Http404("Resident ID file was not found.")
+    log_activity(
+        actor=request.user,
+        action=ActivityLog.Action.SENSITIVE_FILE_VIEWED,
+        target=account,
+        summary=f"Resident ID {side} image viewed for {account.username}.",
+        metadata={"purpose": purpose, "side": side},
+    )
+    content_type, _ = mimetypes.guess_type(file_field.name)
+    return FileResponse(file_field.open("rb"), content_type=content_type or "application/octet-stream")

@@ -7,7 +7,7 @@
             <h1>Edit {{ account_type }} Account</h1>
             <p>{{ account.get_full_name|default:account.username }} - {{ account.username }}</p>
         </div>
-        <a class="btn btn-outline-secondary" href="{% if account.is_staff_member %}{% url 'accounts:staff' %}{% else %}{% url 'accounts:residents' %}{% endif %}">
+        <a class="btn btn-outline-secondary" href="{% if account.is_staff_member %}{% url 'accounts:staff' %}{% else %}{% url 'accounts:residents' %}?purpose={{ access_purpose }}{% endif %}">
             <i class="bi bi-arrow-left me-1"></i>Back
         </a>
     </div>
@@ -15,6 +15,16 @@
     <div class="content-card account-form-card">
         <form method="post" enctype="multipart/form-data" class="account-form-grid">
             {% csrf_token %}
+            {% if access_purpose %}<input type="hidden" name="purpose" value="{{ access_purpose }}">{% endif %}
+            {% if user_form.non_field_errors %}
+                <div class="alert alert-danger">{{ user_form.non_field_errors|striptags }}</div>
+            {% endif %}
+            {% if profile_form.non_field_errors %}
+                <div class="alert alert-danger">{{ profile_form.non_field_errors|striptags }}</div>
+            {% endif %}
+            {% if verification_form.non_field_errors %}
+                <div class="alert alert-danger">{{ verification_form.non_field_errors|striptags }}</div>
+            {% endif %}
             <div>
                 <p class="entity-card-title">Login and identity</p>
                 <div class="row g-3">
@@ -73,7 +83,7 @@
                             <div>
                                 <span class="verification-id-label">Valid ID front</span>
                                 {% if account.resident_profile.valid_id_front_image %}
-                                    <a class="btn btn-outline-primary btn-sm" href="{{ account.resident_profile.valid_id_front_image.url }}" target="_blank">
+                                    <a class="btn btn-outline-primary btn-sm" href="{% url 'accounts:resident_id_file' account.pk 'front' %}?purpose={{ access_purpose }}" target="_blank">
                                         <i class="bi bi-card-image me-1"></i>View front
                                     </a>
                                 {% else %}
@@ -83,7 +93,7 @@
                             <div>
                                 <span class="verification-id-label">Valid ID back</span>
                                 {% if account.resident_profile.valid_id_back_image %}
-                                    <a class="btn btn-outline-primary btn-sm" href="{{ account.resident_profile.valid_id_back_image.url }}" target="_blank">
+                                    <a class="btn btn-outline-primary btn-sm" href="{% url 'accounts:resident_id_file' account.pk 'back' %}?purpose={{ access_purpose }}" target="_blank">
                                         <i class="bi bi-card-image me-1"></i>View back
                                     </a>
                                 {% else %}
@@ -100,7 +110,7 @@
                 <button class="btn btn-primary" type="submit">
                     <i class="bi bi-save-fill me-1"></i>Save Changes
                 </button>
-                <a class="btn btn-outline-secondary" href="{% if account.is_staff_member %}{% url 'accounts:staff' %}{% else %}{% url 'accounts:residents' %}{% endif %}">Cancel</a>
+                <a class="btn btn-outline-secondary" href="{% if account.is_staff_member %}{% url 'accounts:staff' %}{% else %}{% url 'accounts:residents' %}?purpose={{ access_purpose }}{% endif %}">Cancel</a>
             </div>
         </form>
     </div>

@@ -341,7 +341,7 @@
                     <small>{{ reply.created_at|date:"M d, Y h:i A" }}</small>
                     <p>{{ reply.message|linebreaks }}</p>
                     {% if reply.attachment %}
-                        <a class="evidence-link evidence-link--modern" href="{{ reply.attachment.url }}" target="_blank">
+                        <a class="evidence-link evidence-link--modern" href="{% url 'complaints:file' 'reply' reply.pk %}" target="_blank">
                             <span class="evidence-icon"><i class="bi bi-paperclip"></i></span>
                             <span>
                                 <strong>{{ reply.attachment.name }}</strong>
@@ -409,7 +409,7 @@
         <div class="content-card evidence-card">
             <div class="section-title"><i class="bi bi-paperclip me-1"></i>Evidence</div>
             {% for evidence in complaint.evidence_files.all %}
-                <a class="evidence-link evidence-link--modern" href="{{ evidence.file.url }}" target="_blank">
+                <a class="evidence-link evidence-link--modern" href="{% url 'complaints:file' 'evidence' evidence.pk %}" target="_blank">
                     <span class="evidence-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                     <span>
                         <strong>{{ evidence.file.name }}</strong>
@@ -452,7 +452,7 @@
                 <hr>
                 <p class="section-kicker mb-2">Respondent Evidence</p>
                 {% for evidence in complaint.respondent_evidence_files.all %}
-                    <a class="evidence-link evidence-link--modern" href="{{ evidence.file.url }}" target="_blank">
+                    <a class="evidence-link evidence-link--modern" href="{% url 'complaints:file' 'respondent-evidence' evidence.pk %}" target="_blank">
                         <span class="evidence-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                         <span>
                             <strong>{{ evidence.file.name }}</strong>

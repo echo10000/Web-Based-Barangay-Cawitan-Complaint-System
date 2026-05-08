@@ -1,12 +1,38 @@
 {% extends "base.html" %}
+{% load privacy_tags %}
 {% block title %}Residents | Barangay Cawitan{% endblock %}
 {% block content %}
 <div class="account-polish-page account-polish-page--management">
 <div class="page-header page-header-row">
     <div>
         <h1>Residents</h1>
-        <p>Registered resident accounts and contact details.</p>
+        <p>Resident records are protected. Access requires an official purpose and is audit logged.</p>
     </div>
+</div>
+
+{% if purpose_required %}
+<div class="content-card entity-toolbar-card account-toolbar-card mb-3">
+    <form method="get" class="entity-toolbar">
+        <div>
+            <label class="form-label" for="resident-purpose">Official purpose</label>
+            <select id="resident-purpose" class="form-select" name="purpose" required>
+                <option value="">Choose purpose</option>
+                {% for value,label in access_purposes %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="entity-toolbar-actions">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-shield-lock-fill me-1"></i>Continue
+            </button>
+        </div>
+    </form>
+</div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <strong>Purpose:</strong> {{ access_purpose_label }}. Directory contact details are masked; full profile access is logged per resident.
 </div>
 
 <div class="stats-grid entity-stats-grid">
@@ -64,6 +90,7 @@
     <form method="get" class="entity-toolbar">
         <div class="entity-search">
             <label class="form-label" for="resident-search">Search residents</label>
+            <input type="hidden" name="purpose" value="{{ access_purpose }}">
             <div class="complaint-search-input-wrap">
                 <i class="bi bi-search"></i>
                 <input id="resident-search" class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search name, username, email, phone, or address" autocomplete="off">
@@ -99,7 +126,7 @@
                 <i class="bi bi-search me-1"></i>Search
             </button>
             {% if search_query or selected_verification_status or selected_profile_state or selected_id_status %}
-                <a class="btn btn-outline-secondary" href="{% url 'accounts:residents' %}">Clear</a>
+                <a class="btn btn-outline-secondary" href="{% url 'accounts:residents' %}?purpose={{ access_purpose }}">Clear</a>
             {% endif %}
             <div class="complaint-filter-meta">
                 <span>Showing</span>
@@ -143,15 +170,15 @@
                             </div>
                         </td>
                         <td data-label="Username"><span class="entity-chip">{{ resident.username }}</span></td>
-                        <td data-label="Email">{{ resident.email|default:"-" }}</td>
+                        <td data-label="Email">{{ resident.email|mask_email }}</td>
                         <td data-label="Phone">
                             {% if resident.resident_profile.phone_number %}
-                                <a href="tel:{{ resident.resident_profile.phone_number }}" class="detail-contact-link">{{ resident.resident_profile.phone_number }}</a>
+                                {{ resident.resident_profile.phone_number|mask_phone }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td data-label="Address">{{ resident.resident_profile.address|default:"-" }}</td>
+                        <td data-label="Address">{{ resident.resident_profile.address|mask_address }}</td>
                         <td data-label="Verification">
                             {% with status=resident.resident_profile.verification_status %}
                                 {% if status == "VERIFIED" %}
@@ -204,24 +231,26 @@
                                             {% endif %}
                                         {% endwith %}
                                     </div>
-                                    <a href="{% url 'accounts:edit_account' resident.pk %}" class="!flex !items-center !gap-2 !px-3 !py-2 !text-gray-700 !no-underline hover:!bg-gray-100 hover:!text-gray-900">
+                                    <a href="{% url 'accounts:edit_account' resident.pk %}?purpose={{ access_purpose }}" class="!flex !items-center !gap-2 !px-3 !py-2 !text-gray-700 !no-underline hover:!bg-gray-100 hover:!text-gray-900">
                                         <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a8.25 8.25 0 0 1 15 0"/></svg>
                                         <span>View Profile</span>
                                     </a>
-                                    <a href="{% url 'accounts:edit_account' resident.pk %}" class="!flex !items-center !gap-2 !px-3 !py-2 !text-gray-700 !no-underline hover:!bg-gray-100 hover:!text-gray-900">
+                                    <a href="{% url 'accounts:edit_account' resident.pk %}?purpose={{ access_purpose }}" class="!flex !items-center !gap-2 !px-3 !py-2 !text-gray-700 !no-underline hover:!bg-gray-100 hover:!text-gray-900">
                                         <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/></svg>
                                         <span>Edit Resident</span>
                                     </a>
                                     <form method="post" action="{% url 'accounts:reset_account_password' resident.pk %}">
                                         {% csrf_token %}
+                                        <input type="hidden" name="purpose" value="{{ access_purpose }}">
                                         <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-gray-700 hover:!bg-gray-100 hover:!text-gray-900">
                                             <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.03 5.91l-1.48 1.48H10.5v2.25H8.25v2.25H4.5v-3.75l6.34-6.34A6 6 0 1 1 21.75 8.25Z"/></svg>
                                             <span>Reset Password</span>
                                         </button>
                                     </form>
-                                    {% if resident.resident_profile.verification_status == "UNVERIFIED" %}
+                                    {% if resident.resident_profile.verification_status == "UNVERIFIED" and resident.resident_profile.has_valid_id_submission %}
                                         <form method="post" action="{% url 'accounts:verify_resident' resident.pk %}">
                                             {% csrf_token %}
+                                            <input type="hidden" name="purpose" value="{{ access_purpose }}">
                                             <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-gray-700 hover:!bg-green-50 hover:!text-green-700">
                                                 <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75 11.25 15 15 9.75m6 .75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
                                                 <span>Verify Resident</span>
@@ -234,6 +263,7 @@
                                           data-account-name="{{ resident.get_full_name|default:resident.username }}"
                                           data-account-action="{% if resident.is_active %}deactivate{% else %}activate{% endif %}">
                                         {% csrf_token %}
+                                        <input type="hidden" name="purpose" value="{{ access_purpose }}">
                                         <button type="submit" class="!flex !w-full !items-center !gap-2 !border-0 !bg-transparent !px-3 !py-2 !text-left !text-red-500 hover:!bg-red-50">
                                             <svg class="!h-4 !w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                                             <span>{% if resident.is_active %}Deactivate{% else %}Activate{% endif %}</span>
@@ -251,7 +281,7 @@
                                 <p class="entity-empty-title">No residents found.</p>
                                 <p class="entity-empty-subtitle">Try another search or clear the filter to view all registered residents.</p>
                                 {% if search_query %}
-                                    <a class="btn btn-outline-primary btn-sm mt-3" href="{% url 'accounts:residents' %}">View all residents</a>
+                                    <a class="btn btn-outline-primary btn-sm mt-3" href="{% url 'accounts:residents' %}?purpose={{ access_purpose }}">View all residents</a>
                                 {% endif %}
                             </div>
                         </td>
@@ -263,4 +293,5 @@
     {% include "pagination.html" %}
 </div>
 </div>
+{% endif %}
 {% endblock %}

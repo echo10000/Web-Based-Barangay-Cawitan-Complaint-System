@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Export Reviews | Barangay Cawitan{% endblock %}
+{% block content %}
+<div class="page-header page-header-row">
+    <div>
+        <h1>Export Reviews</h1>
+        <p>Approve or reject resident-data exports before any download is allowed.</p>
+    </div>
+</div>
+
+<div class="content-card entity-card mb-3">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Pending Review</p>
+            <p class="entity-card-subtitle">A requester cannot approve their own export.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle entity-table">
+            <thead>
+                <tr>
+                    <th>Request</th>
+                    <th>Requester</th>
+                    <th>Reason</th>
+                    <th>Filters</th>
+                    <th>Decision</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for export_request in pending_export_reviews %}
+                    <tr>
+                        <td>
+                            EXP-{{ export_request.pk|stringformat:"05d" }}
+                            <div class="complaint-row-meta">{{ export_request.get_export_type_display }} - {{ export_request.requested_at|date:"M d, Y h:i A" }}</div>
+                        </td>
+                        <td>{{ export_request.requested_by.get_full_name|default:export_request.requested_by.username }}</td>
+                        <td>{{ export_request.reason }}</td>
+                        <td><code>{{ export_request.filters }}</code></td>
+                        <td>
+                            {% if export_request.requested_by_id == user.id %}
+                                <span class="text-muted">Self-approval blocked</span>
+                            {% else %}
+                                <form method="post" class="d-grid gap-2">
+                                    {% csrf_token %}
+                                    <input class="form-control form-control-sm" name="reviewer_notes" placeholder="Reviewer notes">
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-success" formaction="{% url 'complaints:review_report_export' export_request.pk 'approve' %}" type="submit">Approve</button>
+                                        <button class="btn btn-sm btn-outline-danger" formaction="{% url 'complaints:review_report_export' export_request.pk 'reject' %}" type="submit">Reject</button>
+                                    </div>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="entity-empty">
+                                <i class="bi bi-shield-check entity-empty-icon"></i>
+                                <p class="entity-empty-title">No export requests waiting.</p>
+                                <p class="entity-empty-subtitle">New export requests will appear here for independent review.</p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="content-card entity-card">
+    <div class="entity-card-header">
+        <div>
+            <p class="entity-card-title">Recent Decisions</p>
+            <p class="entity-card-subtitle">Approved, rejected, and used export requests.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle entity-table">
+            <thead><tr><th>Request</th><th>Status</th><th>Reviewer</th><th>Used</th></tr></thead>
+            <tbody>
+                {% for export_request in recent_export_reviews %}
+                    <tr>
+                        <td>EXP-{{ export_request.pk|stringformat:"05d" }}<div class="complaint-row-meta">{{ export_request.get_export_type_display }}</div></td>
+                        <td><span class="badge bg-secondary">{{ export_request.get_status_display }}</span></td>
+                        <td>{{ export_request.approved_by.get_full_name|default:export_request.approved_by.username|default:"-" }}</td>
+                        <td>{{ export_request.used_at|date:"M d, Y h:i A"|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" class="text-muted">No reviewed exports yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
